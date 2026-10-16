@@ -1,0 +1,146 @@
+// Prisma schema for Habitat — maps onto the existing Supabase Postgres
+// tables created by supabase/schema.sql + migrate_growth_features.sql.
+// Introspection-style hand-written models: no db push / no destructive changes.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum habit_kind {
+  build
+  quit
+
+  @@map("habit_kind")
+}
+
+model Habit {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String
+  kind               habit_kind
+  start_date         DateTime  @db.Date
+  color              String    @default("#7C9A82")
+  sort_order         Int       @default(0)
+  archived_at        DateTime? @db.Timestamptz(6)
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime  @default(now()) @db.Timestamptz(6)
+  frequency          String    @default("daily")
+  stack_after        String?
+  two_minute_version String?
+  identity_proof     String?
+  source_key         String?
+  logs               HabitLog[]
+  goal_habits        GoalHabit[]
+  routine_habit_links RoutineHabitLink[]
+
+  @@map("habits")
+}
+
+model HabitLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  habit_id   String   @db.Uuid
+  log_date   DateTime @db.Date
+  /// build: day completed; quit: day relapsed (breaks streak)
+  status     String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  habit      Habit    @relation(fields: [habit_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([habit_id, log_date])
+  @@index([habit_id, log_date], map: "habit_logs_habit_date_idx")
+  @@map("habit_logs")
+}
+
+model Goal {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title              String
+  /// e.g. "I am a healthy person" — shown as the goal's hero line.
+  identity_statement String
+  why                String?
+  color              String    @default("#A78BFA")
+  target_date        DateTime? @db.Date
+  archived_at        DateTime? @db.Timestamptz(6)
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime  @default(now()) @db.Timestamptz(6)
+  goal_habits        GoalHabit[]
+
+  @@map("goals")
+}
+
+model GoalHabit {
+  goal_id    String   @db.Uuid
+  habit_id   String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  goal       Goal     @relation(fields: [goal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  habit      Habit    @relation(fields: [habit_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([goal_id, habit_id])
+  @@map("goal_habits")
+}
+
+// User-authored routine "moments" (the editable weekday/weekend arcs).
+// `slot_key` is the stable identifier that routine_slot_checks and
+// routine_habit_links reference, so editing a slot never loses its history.
+model RoutineSlot {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slot_key   String   @unique
+  /// "weekday" | "weekend"
+  day_type   String
+  time       String
+  title      String
+  do_text    String   @default("")
+  dont_text  String   @default("")
+  sort_order Int      @default(0)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([day_type, sort_order], map: "routine_slots_day_order_idx")
+  @@map("routine_slots")
+}
+
+model RoutineSlotCheck {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slot_key   String
+  slot_date  DateTime @db.Date
+  done       Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([slot_key, slot_date])
+  @@map("routine_slot_checks")
+}
+
+model RoutineHabitLink {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slot_key   String
+  habit_id   String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  habit      Habit    @relation(fields: [habit_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([slot_key, habit_id])
+  @@map("routine_habit_links")
+}
+
+model Reflection {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reflect_date      DateTime @unique @db.Date
+  went_well         String   @default("")
+  distracted        String   @default("")
+  improve_tomorrow  String   @default("")
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("reflections")
+}
+
+model WeeklyReview {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  week_start_date DateTime @unique @db.Date
+  moved_closer    Boolean
+  notes           String   @default("")
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("weekly_reviews")
+}
