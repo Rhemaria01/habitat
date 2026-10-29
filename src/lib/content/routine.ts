@@ -6,131 +6,12 @@
  * Reference-only lists (weekend rules, five habits, three rules) stay static.
  */
 
-export type DayType = "weekday" | "weekend";
+import { PERSONAL_WEEKDAY_SLOTS } from "@/lib/content/personal-data";
+import type { DayType, RoutineSlot, RoutineSlotInput } from "@/lib/content/routine-types";
 
-export type RoutineSlot = {
-  /** Database row id — present for DB-loaded slots, absent for static seed. */
-  id?: string;
-  /** Stable identifier referenced by checks + habit links. */
-  key: string;
-  time: string;
-  title: string;
-  doText: string;
-  dontText: string;
-  dayType: DayType;
-};
+export type { DayType, RoutineSlot, RoutineSlotInput };
 
-/** Editable fields for creating/updating a routine slot. */
-export type RoutineSlotInput = {
-  time: string;
-  title: string;
-  doText: string;
-  dontText: string;
-  dayType: DayType;
-};
-
-export const WEEKDAY_SLOTS: RoutineSlot[] = [
-  {
-    key: "weekday-wake",
-    time: "8:00 AM",
-    title: "When you wake up",
-    doText:
-      "Get out of bed, drink water, and decide the one most important thing you want to accomplish today.",
-    dontText:
-      "Start scrolling in bed or immediately fill your mind with messages and other people's activities.",
-    dayType: "weekday",
-  },
-  {
-    key: "weekday-commute",
-    time: "9:00–9:15 AM",
-    title: "Getting ready and leaving",
-    doText:
-      "Get ready without rushing. Use your commute to think, listen to something useful, or simply relax.",
-    dontText:
-      "Consume random reels or jump between several videos just because you have spare time.",
-    dayType: "weekday",
-  },
-  {
-    key: "weekday-morning-work",
-    time: "10:00 AM–1:00 PM",
-    title: "Office work",
-    doText:
-      "Pick one important work task. Focus for 30–45 minutes before switching tasks when practical. Write down distracting ideas to revisit later.",
-    dontText:
-      "Keep checking notifications, multitask unnecessarily, or abandon difficult work to do something more exciting.",
-    dayType: "weekday",
-  },
-  {
-    key: "weekday-lunch",
-    time: "1:00–1:30 PM",
-    title: "Lunch",
-    doText:
-      "Eat properly. Give yourself a short break without constantly switching between your phone, messages, and videos.",
-    dontText:
-      "Turn every break into a long scrolling session that makes returning to work harder.",
-    dayType: "weekday",
-  },
-  {
-    key: "weekday-afternoon-work",
-    time: "2:00–5:00 PM",
-    title: "Afternoon work",
-    doText:
-      "Finish one meaningful piece of work before starting unnecessary new tasks. Use your communication skills to explain ideas and collaborate.",
-    dontText:
-      "Confuse being busy with making progress, or start a new project whenever your current task becomes boring.",
-    dayType: "weekday",
-  },
-  {
-    key: "weekday-snack",
-    time: "5:00 PM",
-    title: "Snack or afternoon break",
-    doText:
-      "Take a proper break, have your planned snack when needed, and move around for a few minutes.",
-    dontText:
-      "Use sugar, endless scrolling, or constant entertainment as your automatic response to every dip in energy.",
-    dayType: "weekday",
-  },
-  {
-    key: "weekday-home",
-    time: "8:00 PM",
-    title: "Returning home",
-    doText:
-      "Give yourself a small transition period. Change clothes, relax, and then begin your evening routine.",
-    dontText:
-      "Lie down with your phone and accidentally lose the whole evening.",
-    dayType: "weekday",
-  },
-  {
-    key: "weekday-cooking",
-    time: "8:30–9:30 PM",
-    title: "Cooking and dinner",
-    doText:
-      "Cook and eat your usual meal. Treat cooking as a natural break from work and screens.",
-    dontText:
-      "Keep checking your phone between every small cooking task or postpone dinner because you're distracted.",
-    dayType: "weekday",
-  },
-  {
-    key: "weekday-walk",
-    time: "After dinner",
-    title: "Daily walk",
-    doText:
-      "Continue your walking habit and work toward your usual 10,000-step target on weekdays. If you are tired, a shorter walk is better than abandoning the habit entirely.",
-    dontText:
-      "Sit scrolling for an hour and then decide it's too late to walk.",
-    dayType: "weekday",
-  },
-  {
-    key: "weekday-before-bed",
-    time: "Before bed",
-    title: "Make your bed, write, chant and read",
-    doText:
-      "Keep these existing habits. Write a few lines about your day, chant without rushing, and read a little. Spend five minutes without your phone.",
-    dontText:
-      "Try to do everything perfectly, turn your routine into a long checklist, or replace reading with reels.",
-    dayType: "weekday",
-  },
-];
+export const WEEKDAY_SLOTS: RoutineSlot[] = PERSONAL_WEEKDAY_SLOTS;
 
 export const WEEKEND_SLOTS: RoutineSlot[] = [
   {
@@ -188,7 +69,7 @@ export const WEEKEND_SLOTS: RoutineSlot[] = [
     time: "Night",
     title: "Bedtime",
     doText:
-      "Try to avoid a large weekday–weekend sleep schedule difference.",
+      "Keep bedtime near your weekday rhythm when you can — still aim for enough sleep before Monday gym.",
     dontText:
       "Stay up late simply because there is always another video to watch.",
     dayType: "weekend",
@@ -250,19 +131,19 @@ export const WEEKEND_RULES: { rule: string; doText: string; dontText: string }[]
 
 export const FIVE_KEY_HABITS = [
   {
-    key: "five-morning-priority",
-    title: "One priority each morning",
-    text: "Write down the single most important task for the day.",
+    key: "five-gym-session",
+    title: "Gym session done",
+    text: "Show up for the 6:45–8:15 AM session on weekdays.",
   },
   {
-    key: "five-focused-session",
-    title: "One focused work session",
-    text: "Spend 30 minutes on one task without unnecessary interruptions.",
+    key: "five-steps",
+    title: "Steps logged",
+    text: "Track daily steps separately from gym attendance.",
   },
   {
-    key: "five-phone-free-walk",
-    title: "Phone-free walking",
-    text: "Walk without scrolling, even if only for 10 minutes.",
+    key: "five-bedtime",
+    title: "In bed by 11 PM",
+    text: "Protect roughly 7h 15m of sleep before a 6:15 AM wake.",
   },
   {
     key: "five-silence",

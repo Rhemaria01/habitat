@@ -3,6 +3,7 @@
 import { MotionConfig } from "motion/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { HabitatPets } from "@/components/pets/HabitatPets";
 
 /**
  * Client-side providers wrapped around the whole app:
@@ -13,6 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <TooltipProvider>
       <MotionConfig reducedMotion="user">
         {children}
+        <HabitatPets />
         <Toaster position="bottom-center" />
       </MotionConfig>
     </TooltipProvider>

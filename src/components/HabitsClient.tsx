@@ -181,6 +181,7 @@ export function HabitsClient({
             onValueChange={(v) => v && setFilter(v as Filter)}
             className="w-full justify-stretch rounded-lg bg-muted p-1"
             size="sm"
+            spacing={0}
             aria-label="Filter habits"
           >
             <ToggleGroupItem value="all" className="flex-1">

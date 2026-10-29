@@ -278,6 +278,7 @@ export function HabitForm({
         onValueChange={(v) => v && setBehavior(v as HabitBehaviorType)}
         className="w-full justify-stretch rounded-lg bg-muted p-1"
         size="sm"
+        spacing={0}
       >
         <ToggleGroupItem value="build" className="flex-1" aria-label="Grow a habit">
           Grow a habit
@@ -296,6 +297,7 @@ export function HabitForm({
         onValueChange={(v) => v && setFrequency(v as HabitFrequency)}
         className="w-full justify-stretch rounded-lg bg-muted p-1"
         size="sm"
+        spacing={0}
       >
         <ToggleGroupItem value="daily" className="flex-1" aria-label="Every day">
           Every day

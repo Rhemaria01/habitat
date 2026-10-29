@@ -509,6 +509,21 @@ h3 {
   background: var(--card);
 }
 
+.panel > h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Label + control rows (Settings, wizard steps, etc.) */
+.panel div:has(> [data-slot="label"]:first-child),
+.panel div:has(> [data-slot="field-label"]:first-child) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .panel-head {
   display: flex;
   align-items: center;
@@ -2329,6 +2344,205 @@ h3 {
 
   .slot-edit-move {
     flex-direction: row;
+  }
+}
+
+/* —— Habitat pets (bot-avatars companions) —— */
+.habitat-pets-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.habitat-pet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: auto;
+  will-change: transform;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
+}
+
+.habitat-pet-name {
+  position: absolute;
+  left: 50%;
+  bottom: -0.35rem;
+  transform: translateX(-50%);
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  background: var(--glass);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.habitat-pet-ball {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #fff6b0, #f0b429 45%, #c4840d);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.25),
+    0 4px 10px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.habitat-pets-throw-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+  cursor: crosshair;
+  border: none;
+  background: rgba(94, 106, 210, 0.04);
+  backdrop-filter: none;
+}
+
+.habitat-pets-dock {
+  position: fixed;
+  z-index: 26;
+  padding: 0.55rem 0.65rem 0.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 14px 38px var(--shadow);
+  pointer-events: auto;
+}
+
+.habitat-pets-dock-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.habitat-pets-dock-title {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.habitat-pets-dock-ball,
+.habitat-pets-dock-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-hi);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.habitat-pets-dock-ball:hover,
+.habitat-pets-dock-cancel:hover {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  color: var(--primary-bright);
+}
+
+.habitat-pets-homes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.habitat-pet-home {
+  display: grid;
+  grid-template-columns: 3.25rem 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.35rem;
+  row-gap: 0.15rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.habitat-pet-bed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  grid-row: 1 / span 2;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.75rem;
+  border: 1px dashed color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+.habitat-pet-bed-occupied {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--primary) 8%, var(--muted));
+}
+
+.habitat-pet-bed-empty {
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--muted-foreground);
+  opacity: 0.45;
+}
+
+.habitat-pet-home-name {
+  margin: 0;
+  align-self: end;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.habitat-pet-home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  align-self: start;
+}
+
+.habitat-pet-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.habitat-pet-action:hover:not(:disabled) {
+  color: var(--primary-bright);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+
+.habitat-pet-action:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .habitat-pets-dock {
+    right: 0.5rem;
+    left: auto;
+    max-width: calc(100vw - 1rem);
   }
 }
 
