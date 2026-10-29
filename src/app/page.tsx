@@ -2,7 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { TodayClient } from "@/components/TodayClient";
 import { listGoals } from "@/app/actions/goals";
 import { listHabits } from "@/app/actions/habits";
-import { getReflection, getWeeklyReview } from "@/app/actions/reflections";
+import { getWeeklyReview } from "@/app/actions/reflections";
 import { getRoutineData } from "@/app/actions/routine";
 import { todayKey, weekStartKey } from "@/lib/dates";
 import { dayTypeForDate } from "@/lib/content/routine";
@@ -22,15 +22,13 @@ export default async function HomePage() {
     links: [],
     slots: [],
   };
-  let reflection = null;
   let weeklyReview = null;
 
   try {
-    [habits, goals, routine, reflection, weeklyReview] = await Promise.all([
+    [habits, goals, routine, weeklyReview] = await Promise.all([
       listHabits(),
       listGoals(),
       getRoutineData(today),
-      getReflection(today),
       getWeeklyReview(weekStart),
     ]);
   } catch (e) {
@@ -80,7 +78,6 @@ export default async function HomePage() {
           links={routine.links}
           allHabits={habits}
           goals={goals}
-          reflection={reflection}
           weeklyReview={weeklyReview}
           isSunday={new Date().getDay() === 0}
           rememberLine={rememberLineForDate(today)}

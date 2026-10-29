@@ -123,18 +123,6 @@ model RoutineHabitLink {
   @@map("routine_habit_links")
 }
 
-model Reflection {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  reflect_date      DateTime @unique @db.Date
-  went_well         String   @default("")
-  distracted        String   @default("")
-  improve_tomorrow  String   @default("")
-  created_at        DateTime @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime @default(now()) @db.Timestamptz(6)
-
-  @@map("reflections")
-}
-
 model WeeklyReview {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   week_start_date DateTime @unique @db.Date

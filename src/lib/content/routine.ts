@@ -269,11 +269,6 @@ export const FIVE_KEY_HABITS = [
     title: "Five minutes of silence",
     text: "After chanting or before reading, sit quietly without your phone.",
   },
-  {
-    key: "five-evening-review",
-    title: "Three-line evening review",
-    text: "Write what went well, what distracted you, and what you will improve tomorrow.",
-  },
 ];
 
 export const THREE_RULES = [

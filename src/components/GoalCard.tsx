@@ -17,7 +17,7 @@ export function ProgressRing({ percent, size = "regular" }: { percent: number; s
   const dim = size === "small" ? 2.4 : 3;
   return (
     <div
-      className="ring"
+      className="progress-ring"
       style={{ width: `${dim}rem`, height: `${dim}rem` }}
       aria-hidden
     >

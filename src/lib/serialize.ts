@@ -2,7 +2,6 @@ import type {
   GoalModel,
   HabitLogModel,
   HabitModel,
-  ReflectionModel,
   RoutineSlotModel,
   WeeklyReviewModel,
 } from "@/generated/prisma/models";
@@ -12,7 +11,6 @@ import type {
   Habit,
   HabitLog,
   HabitWithLogs,
-  Reflection,
   WeeklyReview,
 } from "./types";
 
@@ -84,16 +82,6 @@ export function toGoal(row: GoalModel): Goal {
     archived_at: row.archived_at ? iso(row.archived_at) : null,
     created_at: iso(row.created_at),
     updated_at: iso(row.updated_at),
-  };
-}
-
-export function toReflection(row: ReflectionModel): Reflection {
-  return {
-    id: row.id,
-    reflect_date: dateKey(row.reflect_date),
-    went_well: row.went_well,
-    distracted: row.distracted,
-    improve_tomorrow: row.improve_tomorrow,
   };
 }
 

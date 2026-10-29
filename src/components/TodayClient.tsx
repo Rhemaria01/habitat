@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ArrowRight, Quote } from "lucide-react";
 import { GoalCard } from "@/components/GoalCard";
-import { ReflectionCard } from "@/components/ReflectionCard";
 import { RoutineTimeline } from "@/components/RoutineTimeline";
 import { WeeklyReviewCard } from "@/components/WeeklyReviewCard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -12,7 +11,6 @@ import { LOCALE, parseDateKey } from "@/lib/dates";
 import type {
   GoalWithHabits,
   HabitWithLogs,
-  Reflection,
   RoutineSlotLink,
   WeeklyReview,
 } from "@/lib/types";
@@ -25,7 +23,6 @@ type TodayClientProps = {
   links: RoutineSlotLink[];
   allHabits: HabitWithLogs[];
   goals: GoalWithHabits[];
-  reflection: Reflection | null;
   weeklyReview: WeeklyReview | null;
   isSunday: boolean;
   rememberLine: string;
@@ -39,7 +36,6 @@ export function TodayClient({
   links,
   allHabits,
   goals,
-  reflection,
   weeklyReview,
   isSunday,
   rememberLine,
@@ -122,17 +118,6 @@ export function TodayClient({
           <WeeklyReviewCard weekStart={weekStart} initial={weeklyReview} />
         </section>
       )}
-
-      <section
-        className="panel animate-fade-up"
-        style={{ animationDelay: "200ms" }}
-      >
-        <div className="panel-head">
-          <h2>Evening review</h2>
-          <span className="panel-meta">Three lines, no essays</span>
-        </div>
-        <ReflectionCard dateKey={dateKey} initial={reflection} />
-      </section>
     </div>
   );
 }

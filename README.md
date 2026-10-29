@@ -12,7 +12,7 @@ Track habits you’re **growing**, or days since you **quit** something — incl
 - Calendar month view + GitHub-style year heatmap, tap-to-toggle days
 - Goals: identity statements, linked habit-tasks, weekly progress rings, identity votes, Atomic Habits Four Laws helper
 - Routine timeline (weekday/weekend do's & don'ts) with per-slot ticks and good/bad habit association
-- Feeling guides ("what to do with what you feel"), evening 3-line reflection, weekly review
+- Feeling guides ("what to do with what you feel"), weekly review
 - Communication practice library researched from seven books — adopt any practice as a habit, one click
 - Import & export: copy a JSON prompt template into any gen-AI (ChatGPT / Claude / Gemini), paste its JSON back to bulk-create habits & goals; export your data as JSON anytime
 - Optimistic create / update / delete / check-in
@@ -22,7 +22,7 @@ Track habits you’re **growing**, or days since you **quit** something — incl
 
 1. **Create a Supabase project** at [supabase.com](https://supabase.com).
 2. Open **SQL Editor**, paste and run [`supabase/schema.sql`](supabase/schema.sql).  
-   If you already created the tables earlier, also run [`supabase/migrate_sort_order.sql`](supabase/migrate_sort_order.sql) and [`supabase/migrate_growth_features.sql`](supabase/migrate_growth_features.sql) once (the latter adds goals, routine links, reflections, and the new habit columns).
+   If you already created the tables earlier, also run [`supabase/migrate_sort_order.sql`](supabase/migrate_sort_order.sql) and [`supabase/migrate_growth_features.sql`](supabase/migrate_growth_features.sql) once (the latter adds goals, routine links, weekly reviews, and the new habit columns).
 3. In **Project Settings → Database**, copy the **URI connection string** (host `xxx.supabase.co`, port `5432`, password auth). Prisma talks to Postgres directly — no anon/publishable key needed.
 4. In this repo, create `.env.local`:
 
@@ -51,8 +51,9 @@ npm run dev
 ### Optional deploy
 
 1. Push to GitHub and import the repo in [Vercel](https://vercel.com).
-2. Add the same env vars in the Vercel project settings — `ACCESS_KEY` must equal the passphrase you use to sign in, and `DATABASE_URL` must be the pooled connection string (add `?pgbouncer=true&sslmode=require` if using the transaction-mode pooler).
-3. Deploy, then install from your phone browser (Share → Add to Home Screen / Install app).
+2. Add the same env vars in the Vercel project **Environment Variables** tab (not Framework Settings): `DATABASE_URL`, `ACCESS_KEY`, and `SESSION_SECRET`. `ACCESS_KEY` must equal the passphrase you use to sign in; `DATABASE_URL` should use the pooled connection string (add `?pgbouncer=true&sslmode=require` if using the transaction-mode pooler).
+3. Leave **Framework Settings** at defaults (`npm run build`, etc.) — the repo’s build script runs `prisma generate` before `next build` because the Prisma client is generated into `src/generated/` and is not committed.
+4. Deploy, then install from your phone browser (Share → Add to Home Screen / Install app).
 
 ## Habit types
 

@@ -1653,18 +1653,6 @@ h3 {
   background: var(--chart-2);
 }
 
-/* ---------- reflection ---------- */
-
-.reflect-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
-
-.reflect-fields .field textarea {
-  min-height: 3.6rem;
-}
-
 /* ---------- goals ---------- */
 
 .goal-grid {
@@ -1691,21 +1679,10 @@ h3 {
   flex-direction: column;
   gap: 0.8rem;
   height: 100%;
-  padding: 1.15rem 1.15rem 1.15rem 1.3rem;
+  padding: 1.15rem;
   border-radius: calc(var(--radius) * 2);
   color: inherit;
   text-decoration: none;
-}
-
-.goal-card::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 1rem;
-  bottom: 1rem;
-  width: 4px;
-  border-radius: 999px;
-  background: var(--goal);
 }
 
 .goal-card h2 {
@@ -1738,33 +1715,33 @@ h3 {
   font-weight: 700;
 }
 
-.ring {
+.progress-ring {
   position: relative;
   width: 3rem;
   height: 3rem;
   flex: 0 0 auto;
 }
 
-.ring svg {
+.progress-ring svg {
   transform: rotate(-90deg);
 }
 
-.ring circle {
+.progress-ring circle {
   fill: none;
   stroke-width: 4;
 }
 
-.ring .ring-bg {
+.progress-ring .ring-bg {
   stroke: color-mix(in srgb, var(--foreground) 12%, transparent);
 }
 
-.ring .ring-val {
+.progress-ring .ring-val {
   stroke: var(--goal);
   stroke-linecap: round;
   transition: stroke-dashoffset 400ms ease;
 }
 
-.ring-num {
+.progress-ring .ring-num {
   position: absolute;
   inset: 0;
   display: flex;

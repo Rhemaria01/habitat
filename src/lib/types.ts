@@ -93,13 +93,6 @@ export type RoutineSlotLink = {
   logged: boolean;
 };
 
-export type Reflection = {
-  id: string;
-  reflect_date: string;
-  went_well: string;
-  distracted: string;
-  improve_tomorrow: string;
-};
 
 export type WeeklyReview = {
   id: string;
