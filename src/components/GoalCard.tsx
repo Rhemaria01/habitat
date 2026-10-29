@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { computeGoalStats } from "@/lib/streaks";
 import type { GoalWithHabits } from "@/lib/types";
+import { HaloCard } from "@/components/ui/halo-card";
+import { Badge } from "@/components/ui/badge";
 
 type GoalCardProps = {
   goal: GoalWithHabits;
@@ -44,26 +46,31 @@ export function GoalCard({ goal, index = 0 }: GoalCardProps) {
   const stats = computeGoalStats(goal.habits);
 
   return (
-    <Link
-      href={`/goals/${goal.id}`}
-      className="goal-card animate-fade-up"
+    <HaloCard
+      padding="none"
+      className="goal-halo animate-fade-up"
+      aria-label={goal.title}
       style={{
         animationDelay: `${index * 60}ms`,
         ["--goal" as string]: goal.color,
       }}
     >
-      <div>
-        <h2>{goal.title}</h2>
-        <p className="goal-identity">“{goal.identity_statement}”</p>
-      </div>
-      <div className="goal-foot">
-        <span className="goal-taskcount">
-          {stats.total === 0
-            ? "No tasks yet"
-            : `${stats.kept}/${stats.total} tasks moved this week · ${stats.votes} votes`}
-        </span>
-        <ProgressRing percent={stats.percent} />
-      </div>
-    </Link>
+      <Link href={`/goals/${goal.id}`} className="goal-card">
+        <div>
+          <h2>{goal.title}</h2>
+          <p className="goal-identity">“{goal.identity_statement}”</p>
+        </div>
+        <div className="goal-foot">
+          {stats.total === 0 ? (
+            <Badge variant="outline">No tasks yet</Badge>
+          ) : (
+            <Badge variant="secondary">
+              {stats.kept}/{stats.total} tasks this week · {stats.votes} votes
+            </Badge>
+          )}
+          <ProgressRing percent={stats.percent} />
+        </div>
+      </Link>
+    </HaloCard>
   );
 }

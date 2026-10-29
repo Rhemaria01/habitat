@@ -51,7 +51,7 @@ export default async function HomePage() {
               <p className="form-error" style={{ marginTop: "0.5rem" }}>
                 Your database is missing the new growth tables/columns.
               </p>
-              <p style={{ marginTop: "0.75rem", color: "var(--ink-soft)" }}>
+              <p style={{ marginTop: "0.75rem", color: "var(--muted-foreground)" }}>
                 In Supabase → SQL Editor, run{" "}
                 <code>supabase/migrate_growth_features.sql</code>, then{" "}
                 <code>supabase/migrate_editable_routine.sql</code> (and{" "}

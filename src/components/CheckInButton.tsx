@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useOptimistic, useTransition } from "react";
+import { toast } from "sonner";
 import { toggleHabitDay } from "@/app/actions/habits";
 import { todayKey } from "@/lib/dates";
 import type { HabitKind, HabitLog } from "@/lib/types";
+import { BorderBeamButton } from "@/components/ui/border-beam-button";
 
 type CheckInButtonProps = {
   habitId: string;
@@ -46,12 +48,14 @@ export function CheckInButton({
 
       const result = await toggleHabitDay(habitId, kind, today, active);
       if (result.ok) router.refresh();
+      else toast.error(result.error);
     });
   }
 
   return (
-    <button
+    <BorderBeamButton
       type="button"
+      colorVariant="mono"
       className={`check-btn large ${active ? "on" : ""} ${kind} animate-pop`}
       onClick={onClick}
       aria-pressed={active}
@@ -63,6 +67,6 @@ export function CheckInButton({
         : active
           ? "Clear today’s slip"
           : "I slipped today"}
-    </button>
+    </BorderBeamButton>
   );
 }

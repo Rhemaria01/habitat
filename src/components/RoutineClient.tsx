@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ArrowRight, Pencil } from "lucide-react";
 import { RoutineTimeline } from "@/components/RoutineTimeline";
 import { RoutineEditor } from "@/components/RoutineEditor";
+import { Button } from "@/components/ui/button";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
 import {
   FIVE_KEY_HABITS,
   THREE_RULES,
@@ -45,24 +51,23 @@ export function RoutineClient({
         </p>
       </section>
 
-      <div className="view-tabs" role="tablist" aria-label="Day type">
-        <button
-          type="button"
-          className={`view-tab ${dayType === "weekday" ? "active" : ""}`}
-          onClick={() => setDayType("weekday")}
-        >
+      <ToggleGroup
+        type="single"
+        value={dayType}
+        onValueChange={(v) => v && setDayType(v as DayType)}
+        className="w-full justify-stretch rounded-lg bg-muted p-1"
+        size="sm"
+        aria-label="Day type"
+      >
+        <ToggleGroupItem value="weekday" className="flex-1">
           Weekday
           {todayType === "weekday" ? " · Today" : ""}
-        </button>
-        <button
-          type="button"
-          className={`view-tab ${dayType === "weekend" ? "active" : ""}`}
-          onClick={() => setDayType("weekend")}
-        >
+        </ToggleGroupItem>
+        <ToggleGroupItem value="weekend" className="flex-1">
           Weekend
           {todayType === "weekend" ? " · Today" : ""}
-        </button>
-      </div>
+        </ToggleGroupItem>
+      </ToggleGroup>
 
       <section
         className="panel animate-fade-up"
@@ -70,13 +75,21 @@ export function RoutineClient({
       >
         <div className="panel-head">
           <h2>{dayType === "weekday" ? "The weekday arc" : "The weekend arc"}</h2>
-          <button
+          <Button
             type="button"
-            className="ghost-btn"
+            variant="ghost"
+            size="sm"
             onClick={() => setEditing((v) => !v)}
           >
-            {editing ? "Done editing" : "Edit routine"}
-          </button>
+            {editing ? (
+              "Done editing"
+            ) : (
+              <>
+                <Pencil className="size-3.5" aria-hidden />
+                Edit routine
+              </>
+            )}
+          </Button>
         </div>
         {editing ? (
           <>
@@ -164,10 +177,11 @@ export function RoutineClient({
             <li key={rule}>{rule}</li>
           ))}
         </ul>
-        <p className="grid-hint" style={{ marginTop: "0.9rem" }}>
+        <p className="grid-hint mt-3">
           Feeling stuck mid-day?{" "}
-          <Link href="/guides" className="guide-cta">
-            Open the feeling guides →
+          <Link href="/guides" className="guide-cta inline-flex items-center gap-1">
+            Open the feeling guides
+            <ArrowRight className="size-3.5" aria-hidden />
           </Link>
         </p>
       </section>

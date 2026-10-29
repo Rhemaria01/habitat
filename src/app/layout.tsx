@@ -1,18 +1,21 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { cookies } from "next/headers";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { THEME_COOKIE, normalizeTheme } from "@/lib/theme";
+import { Providers } from "@/components/providers";
 import "./globals.css";
+import { cn } from "@/lib/utils";
 
-const jakarta = Plus_Jakarta_Sans({
+const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-jakarta",
+  variable: "--font-sans",
   display: "swap",
 });
 
-const inter = Inter({
+const geistMono = Geist_Mono({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-geist-mono",
   display: "swap",
 });
 
@@ -40,7 +43,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0e1116",
+  themeColor: "#09090b",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -55,9 +58,21 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       data-theme={theme}
-      className={`h-full ${jakarta.variable} ${inter.variable}`}
+      className={cn("h-full", geist.variable, geistMono.variable, "font-sans")}
     >
-      <body className="flex min-h-dvh flex-col antialiased">{children}</body>
+      <body className="flex min-h-dvh flex-col antialiased">
+        {/* Re-apply the stored theme before paint: the PWA precaches the
+            offline shell, so its server-rendered data-theme can be stale. */}
+        <Script
+          id="theme-sync"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var m=document.cookie.match(/(?:^|; )habitat-theme=(dark|light)/);if(m)document.documentElement.dataset.theme=m[1];}catch(e){}",
+          }}
+        />
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

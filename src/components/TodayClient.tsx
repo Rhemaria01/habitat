@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight, Quote } from "lucide-react";
 import { GoalCard } from "@/components/GoalCard";
 import { ReflectionCard } from "@/components/ReflectionCard";
 import { RoutineTimeline } from "@/components/RoutineTimeline";
 import { WeeklyReviewCard } from "@/components/WeeklyReviewCard";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { RoutineSlot } from "@/lib/content/routine";
-import { parseDateKey } from "@/lib/dates";
+import { LOCALE, parseDateKey } from "@/lib/dates";
 import type {
   GoalWithHabits,
   HabitWithLogs,
@@ -42,7 +44,7 @@ export function TodayClient({
   isSunday,
   rememberLine,
 }: TodayClientProps) {
-  const prettyDate = parseDateKey(dateKey).toLocaleDateString(undefined, {
+  const prettyDate = parseDateKey(dateKey).toLocaleDateString(LOCALE, {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -53,7 +55,10 @@ export function TodayClient({
       <section className="today-head animate-fade-up">
         <h1>Today</h1>
         <p className="today-date">{prettyDate}</p>
-        <p className="remember-line">{rememberLine}</p>
+        <Alert className="remember-line mt-3">
+          <Quote className="size-4" aria-hidden />
+          <AlertDescription>{rememberLine}</AlertDescription>
+        </Alert>
       </section>
 
       <section
@@ -62,8 +67,8 @@ export function TodayClient({
       >
         <div className="panel-head">
           <h2>Your day, on purpose</h2>
-          <Link href="/routine" className="panel-meta">
-            Full routine →
+          <Link href="/routine" className="panel-meta inline-flex items-center gap-1">
+            Full routine <ArrowRight className="size-3.5" aria-hidden />
           </Link>
         </div>
         <p className="grid-hint">
@@ -85,15 +90,16 @@ export function TodayClient({
       >
         <div className="panel-head">
           <h2>Goals in motion</h2>
-          <Link href="/goals" className="panel-meta">
-            All goals →
+          <Link href="/goals" className="panel-meta inline-flex items-center gap-1">
+            All goals <ArrowRight className="size-3.5" aria-hidden />
           </Link>
         </div>
         {goals.length === 0 ? (
           <p className="grid-hint">
             No goals yet.{" "}
-            <Link href="/goals" className="guide-cta">
-              Name the person you&apos;re becoming →
+            <Link href="/goals" className="guide-cta inline-flex items-center gap-1">
+              Name the person you&apos;re becoming
+              <ArrowRight className="size-3.5" aria-hidden />
             </Link>
           </p>
         ) : (

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { createHabit, updateHabit } from "@/app/actions/habits";
 import { PastDaysPicker } from "@/components/PastDaysPicker";
 import { formatLongDate, todayKey } from "@/lib/dates";
@@ -12,15 +13,33 @@ import type {
   HabitInput,
   HabitKind,
 } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Lightbulb } from "lucide-react";
 
 const COLORS = [
   "#4FD1A5",
-  "#FF7A8A",
-  "#F5B942",
+  "#5E6AD2",
+  "#F0B429",
   "#A78BFA",
   "#6FB3E8",
-  "#F2789F",
+  "#F4576B",
 ];
+
+const NO_GOAL = "__none__";
 
 type HabitFormProps = {
   habit?: Habit;
@@ -58,7 +77,7 @@ export function HabitForm({
   const [identityProof, setIdentityProof] = useState(
     habit?.identity_proof ?? "",
   );
-  const [goalId, setGoalId] = useState(defaultGoalId ?? "");
+  const [goalId, setGoalId] = useState(defaultGoalId ?? NO_GOAL);
   const [step, setStep] = useState<Step>("details");
   const [markedDays, setMarkedDays] = useState<Set<string>>(new Set());
 
@@ -75,7 +94,7 @@ export function HabitForm({
     setStackAfter("");
     setTwoMinute("");
     setIdentityProof("");
-    setGoalId(defaultGoalId ?? "");
+    setGoalId(NO_GOAL);
     setStep("details");
     setMarkedDays(new Set());
   }
@@ -94,7 +113,7 @@ export function HabitForm({
     };
 
     if (!habit) {
-      if (goalId) payload.goal_id = goalId;
+      if (goalId && goalId !== NO_GOAL) payload.goal_id = goalId;
       if (historyDates !== null) {
         if (kind === "quit") {
           if (historyDates.length > 0) payload.relapse_dates = historyDates;
@@ -111,9 +130,11 @@ export function HabitForm({
 
       if (!result.ok) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
 
+      toast.success(habit ? "Habit updated." : `“${result.data.name}” planted.`);
       resetForm();
       onDone?.();
       router.refresh();
@@ -136,13 +157,15 @@ export function HabitForm({
   if (step === "history-ask") {
     return (
       <div className={`habit-form history-step ${compact ? "compact" : ""}`}>
-        <button
+        <Button
           type="button"
-          className="ghost-btn history-back"
+          variant="ghost"
+          size="sm"
+          className="self-start -ml-2"
           onClick={() => setStep("details")}
         >
           ← Back
-        </button>
+        </Button>
 
         <div className="history-ask">
           <h3>Since {formatLongDate(startDate)}</h3>
@@ -153,26 +176,27 @@ export function HabitForm({
           </p>
 
           <div className="history-ask-actions">
-            <button
+            <Button
               type="button"
-              className="primary-btn"
               disabled={pending}
               onClick={() => save([])}
+              className="w-full"
             >
               {pending
                 ? "Saving…"
                 : isQuit
                   ? "No, stayed clean"
                   : "No, kept every day"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className={`secondary-btn ${isQuit ? "quit" : ""}`}
+              variant={isQuit ? "destructive" : "secondary"}
               disabled={pending}
               onClick={() => setStep("history-pick")}
+              className="w-full"
             >
               {isQuit ? "Yes, I slipped" : "Yes, I missed some"}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -184,13 +208,15 @@ export function HabitForm({
   if (step === "history-pick") {
     return (
       <div className={`habit-form history-step ${compact ? "compact" : ""}`}>
-        <button
+        <Button
           type="button"
-          className="ghost-btn history-back"
+          variant="ghost"
+          size="sm"
+          className="self-start -ml-2"
           onClick={() => setStep("history-ask")}
         >
           ← Back
-        </button>
+        </Button>
 
         <div className="history-ask">
           <h3>
@@ -207,11 +233,11 @@ export function HabitForm({
 
         {error ? <p className="form-error">{error}</p> : null}
 
-        <button
+        <Button
           type="button"
-          className="primary-btn"
           disabled={pending}
           onClick={() => save([...markedDays].sort())}
+          className="w-full"
         >
           {pending
             ? "Saving…"
@@ -220,7 +246,7 @@ export function HabitForm({
               : isQuit
                 ? `Plant habit · ${markedDays.size} slip${markedDays.size === 1 ? "" : "s"}`
                 : `Plant habit · ${markedDays.size} miss${markedDays.size === 1 ? "" : "es"}`}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -230,123 +256,133 @@ export function HabitForm({
       onSubmit={onDetailsSubmit}
       className={`habit-form ${compact ? "compact" : ""}`}
     >
-      <label className="field">
-        <span>Name</span>
-        <input
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="habit-name">Name</Label>
+        <Input
+          id="habit-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={kind === "quit" ? "Quit smoking" : "Morning stretch"}
           required
           maxLength={80}
         />
-      </label>
+      </div>
 
-      <div className="kind-toggle" role="group" aria-label="Habit type">
-        <button
-          type="button"
-          className={kind === "build" ? "active" : ""}
-          onClick={() => setKind("build")}
-        >
+      <ToggleGroup
+        type="single"
+        value={kind}
+        onValueChange={(v) => v && setKind(v as HabitKind)}
+        className="w-full justify-stretch rounded-lg bg-muted p-1"
+        size="sm"
+      >
+        <ToggleGroupItem value="build" className="flex-1" aria-label="Grow a habit">
           Grow a habit
-        </button>
-        <button
-          type="button"
-          className={kind === "quit" ? "active quit" : ""}
-          onClick={() => setKind("quit")}
-        >
+        </ToggleGroupItem>
+        <ToggleGroupItem value="quit" className="flex-1" aria-label="Quit a habit">
           Quit a habit
-        </button>
-      </div>
+        </ToggleGroupItem>
+      </ToggleGroup>
 
-      <div className="kind-toggle" role="group" aria-label="Frequency">
-        <button
-          type="button"
-          className={frequency === "daily" ? "active" : ""}
-          onClick={() => setFrequency("daily")}
-        >
+      <ToggleGroup
+        type="single"
+        value={frequency}
+        onValueChange={(v) => v && setFrequency(v as HabitFrequency)}
+        className="w-full justify-stretch rounded-lg bg-muted p-1"
+        size="sm"
+      >
+        <ToggleGroupItem value="daily" className="flex-1" aria-label="Every day">
           Every day
-        </button>
-        <button
-          type="button"
-          className={frequency === "weekly" ? "active" : ""}
-          onClick={() => setFrequency("weekly")}
-        >
+        </ToggleGroupItem>
+        <ToggleGroupItem value="weekly" className="flex-1" aria-label="Weekly">
           Weekly
-        </button>
-      </div>
+        </ToggleGroupItem>
+      </ToggleGroup>
 
-      <label className="field">
-        <span>{kind === "quit" ? "Quit date" : "Started on"}</span>
-        <input
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="habit-start">{kind === "quit" ? "Quit date" : "Started on"}</Label>
+        <Input
+          id="habit-start"
           type="date"
           value={startDate}
           max={todayKey()}
           onChange={(e) => setStartDate(e.target.value)}
           required
         />
-      </label>
+      </div>
 
       {needsHistoryOnboarding ? (
-        <p className={`form-note ${isQuit ? "quit" : ""}`}>
-          {isQuit
-            ? "Past quit date — next we’ll ask if you relapsed since then. Days stay clean by default."
-            : "Past start date — next we’ll ask if you missed any days. Days count as kept by default."}
-        </p>
+        <Alert>
+          <Lightbulb className="size-4" aria-hidden />
+          <AlertDescription>
+            {isQuit
+              ? "Past quit date — next we’ll ask if you relapsed since then. Days stay clean by default."
+              : "Past start date — next we’ll ask if you missed any days. Days count as kept by default."}
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       <details className="form-more">
         <summary>The fine-tuning (optional)</summary>
 
-        <label className="field">
-          <span>Habit stack — &ldquo;After I ___, I will ___&rdquo;</span>
-          <input
-            value={stackAfter}
-            onChange={(e) => setStackAfter(e.target.value)}
-            placeholder="After I pour my morning coffee…"
-            maxLength={200}
-          />
-        </label>
+        <div className="flex flex-col gap-4 pt-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="habit-stack">
+              Habit stack — “After I ___, I will ___”
+            </Label>
+            <Input
+              id="habit-stack"
+              value={stackAfter}
+              onChange={(e) => setStackAfter(e.target.value)}
+              placeholder="After I pour my morning coffee…"
+              maxLength={200}
+            />
+          </div>
 
-        <label className="field">
-          <span>2-minute version — the tiny entry point</span>
-          <input
-            value={twoMinute}
-            onChange={(e) => setTwoMinute(e.target.value)}
-            placeholder="Put on my running shoes"
-            maxLength={200}
-          />
-        </label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="habit-two-minute">2-minute version — the tiny entry point</Label>
+            <Input
+              id="habit-two-minute"
+              value={twoMinute}
+              onChange={(e) => setTwoMinute(e.target.value)}
+              placeholder="Put on my running shoes"
+              maxLength={200}
+            />
+          </div>
 
-        <label className="field">
-          <span>Identity proof — the vote this casts</span>
-          <input
-            value={identityProof}
-            onChange={(e) => setIdentityProof(e.target.value)}
-            placeholder="Proof I am a healthy person"
-            maxLength={200}
-          />
-        </label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="habit-identity">Identity proof — the vote this casts</Label>
+            <Input
+              id="habit-identity"
+              value={identityProof}
+              onChange={(e) => setIdentityProof(e.target.value)}
+              placeholder="Proof I am a healthy person"
+              maxLength={200}
+            />
+          </div>
 
-        {showGoalPicker ? (
-          <label className="field">
-            <span>Serves a goal</span>
-            <select
-              value={goalId}
-              onChange={(e) => setGoalId(e.target.value)}
-            >
-              <option value="">No goal yet</option>
-              {goals.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.title}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
+          {showGoalPicker ? (
+            <div className="flex flex-col gap-2">
+              <Label>Serves a goal</Label>
+              <Select value={goalId} onValueChange={setGoalId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="No goal yet" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_GOAL}>No goal yet</SelectItem>
+                  {goals.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+        </div>
       </details>
 
-      <div className="field">
-        <span>Color</span>
+      <div className="flex flex-col gap-2">
+        <Label>Color</Label>
         <div className="color-row">
           {COLORS.map((c) => (
             <button
@@ -363,7 +399,7 @@ export function HabitForm({
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <button type="submit" className="primary-btn" disabled={pending}>
+      <Button type="submit" disabled={pending} className="w-full">
         {pending
           ? "Saving…"
           : habit
@@ -371,7 +407,7 @@ export function HabitForm({
             : needsHistoryOnboarding
               ? "Continue"
               : "Plant habit"}
-      </button>
+      </Button>
     </form>
   );
 }

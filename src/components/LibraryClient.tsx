@@ -3,11 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { ArrowRight, Check } from "lucide-react";
+import { toast } from "sonner";
 import { adoptPractice, createCommunicatorGoalAction } from "@/app/actions/library";
 import {
   COMMUNICATION_BOOKS,
   COMMUNICATOR_TEMPLATE,
 } from "@/lib/content/communication-books";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 type LibraryClientProps = {
   /** practice keys already adopted as active habits (their source_key). */
@@ -33,16 +37,16 @@ function AdoptButton({
 
   if (adopted) {
     return (
-      <button type="button" className="adopt-btn adopted" disabled>
-        Adopted ✓
-      </button>
+      <Button size="sm" variant="secondary" disabled>
+        <Check className="size-3.5" aria-hidden />
+        Adopted
+      </Button>
     );
   }
 
   return (
-    <button
-      type="button"
-      className="adopt-btn"
+    <Button
+      size="sm"
       disabled={busy}
       onClick={() => {
         onBusyChange(true);
@@ -50,14 +54,17 @@ function AdoptButton({
           const result = await adoptPractice(practiceKey);
           if (result.ok) {
             onAdopted(practiceKey);
+            toast.success("Added to your habits.");
             router.refresh();
+          } else {
+            toast.error(result.error);
           }
           onBusyChange(false);
         });
       }}
     >
-      {busy ? "…" : "Adopt"}
-    </button>
+      Adopt
+    </Button>
   );
 }
 
@@ -83,33 +90,34 @@ export function LibraryClient({
       <section className="panel template-card animate-fade-up">
         <div className="panel-head">
           <h2>{COMMUNICATOR_TEMPLATE.title}</h2>
-          <span className="freq-tag">Goal</span>
+          <Badge variant="secondary">Goal</Badge>
         </div>
         <p className="goal-identity">
           “{COMMUNICATOR_TEMPLATE.identityStatement}”
         </p>
-        <p className="grid-hint" style={{ marginTop: "0.5rem" }}>
-          {COMMUNICATOR_TEMPLATE.why}
-        </p>
+        <p className="grid-hint mt-2">{COMMUNICATOR_TEMPLATE.why}</p>
         <p className="grid-hint">
-          One click creates the goal and {COMMUNICATOR_TEMPLATE.practiceKeys.length}{" "}
-          starter practices as tasks.
+          One click creates the goal and{" "}
+          {COMMUNICATOR_TEMPLATE.practiceKeys.length} starter practices as
+          tasks.
         </p>
-        {hasCommunicator ? (
-          <Link href="/goals" className="adopt-btn adopted" style={{ marginTop: "0.6rem" }}>
-            Goal created ✓ · View goals
-          </Link>
-        ) : (
-          <form action={createCommunicatorGoalAction} style={{ marginTop: "0.6rem" }}>
-            <button
-              type="submit"
-              className="adopt-btn"
-              disabled={busy}
-            >
-              Create this goal
-            </button>
-          </form>
-        )}
+        <div className="mt-3">
+          {hasCommunicator ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link href="/goals">
+                <Check className="size-3.5" aria-hidden />
+                Goal created · View goals
+                <ArrowRight className="size-3.5" aria-hidden />
+              </Link>
+            </Button>
+          ) : (
+            <form action={createCommunicatorGoalAction}>
+              <Button type="submit" size="sm" disabled={busy}>
+                Create this goal
+              </Button>
+            </form>
+          )}
+        </div>
       </section>
 
       {COMMUNICATION_BOOKS.map((book, i) => (
@@ -131,11 +139,11 @@ export function LibraryClient({
                 <strong>{practice.text}</strong>
                 <small>{practice.suggestion}</small>
               </div>
-              <span
-                className={`freq-tag ${practice.frequency === "weekly" ? "weekly" : ""}`}
+              <Badge
+                variant={practice.frequency === "weekly" ? "outline" : "secondary"}
               >
                 {practice.frequency === "weekly" ? "Weekly" : "Daily"}
-              </span>
+              </Badge>
               <AdoptButton
                 practiceKey={practice.key}
                 adopted={adopted.has(practice.key)}

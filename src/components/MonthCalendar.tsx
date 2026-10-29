@@ -4,6 +4,7 @@ import { useMemo, useState, useOptimistic, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toggleHabitDay } from "@/app/actions/habits";
 import {
+  LOCALE,
   parseDateKey,
   toDateKey,
   todayKey,
@@ -91,7 +92,7 @@ export function MonthCalendar({
   );
 
   const label = new Date(cursor.year, cursor.month, 1).toLocaleDateString(
-    undefined,
+    LOCALE,
     { month: "long", year: "numeric" },
   );
 
@@ -190,7 +191,7 @@ export function MonthCalendar({
                 .join(" ")}
               aria-pressed={cell.active}
               aria-label={`${cell.key}${mark ? ` · ${mark}` : ""}`}
-              title={`${parseDateKey(cell.key).toLocaleDateString(undefined, {
+              title={`${parseDateKey(cell.key).toLocaleDateString(LOCALE, {
                 weekday: "short",
                 month: "short",
                 day: "numeric",
@@ -208,7 +209,7 @@ export function MonthCalendar({
           <>
             <span className="heat-cell legend-swatch relapse" />
             <span>Slipped</span>
-            <span className="heat-cell legend-swatch" style={{ background: "color-mix(in srgb, var(--sage) 22%, var(--cream))" }} />
+            <span className="heat-cell legend-swatch" style={{ background: "color-mix(in srgb, var(--primary) 22%, var(--card))" }} />
             <span>Kept</span>
           </>
         ) : (

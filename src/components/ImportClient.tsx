@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { CircleCheck, CircleAlert, Download } from "lucide-react";
+import { toast } from "sonner";
 import { listGoals } from "@/app/actions/goals";
 import { listHabits } from "@/app/actions/habits";
 import { importHabitsGoals, type ImportSummary } from "@/app/actions/import";
@@ -16,6 +18,15 @@ import {
   type ImportDocument,
   type ParseResult,
 } from "@/lib/import-export";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { CodeBlock } from "@/components/ui/code-block";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
 
 type TemplateKey = "habits" | "goals" | "combined";
 
@@ -46,7 +57,6 @@ const TEMPLATES: Record<
 export function ImportClient() {
   const router = useRouter();
   const [tab, setTab] = useState<TemplateKey>("habits");
-  const [copied, setCopied] = useState<string | null>(null);
 
   const [raw, setRaw] = useState("");
   const [preview, setPreview] = useState<ParseResult | null>(null);
@@ -58,16 +68,6 @@ export function ImportClient() {
   const [exportNote, setExportNote] = useState<string | null>(null);
 
   const template = TEMPLATES[tab];
-
-  function copy(key: string, text: string) {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        setCopied(key);
-        window.setTimeout(() => setCopied(null), 1600);
-      })
-      .catch(() => setError("Copy failed — select the text and copy manually."));
-  }
 
   function onPreview() {
     setError(null);
@@ -81,12 +81,16 @@ export function ImportClient() {
       const res = await importHabitsGoals(raw);
       if (!res.ok) {
         setError(res.error);
+        toast.error(res.error);
         setPreview(parseImportJson(raw));
         return;
       }
       setResult(res.data);
       setPreview(null);
       setRaw("");
+      toast.success(
+        `Imported ${res.data.habitsCreated} habits · ${res.data.goalsCreated} goals.`,
+      );
       router.refresh();
     });
   }
@@ -109,8 +113,13 @@ export function ImportClient() {
         a.click();
         URL.revokeObjectURL(url);
         setExportNote("Downloaded your habits + goals as JSON.");
+        toast.success("Backup downloaded.");
       })
-      .catch((e) => setExportNote(e instanceof Error ? e.message : "Export failed."))
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : "Export failed.";
+        setExportNote(msg);
+        toast.error(msg);
+      })
       .finally(() => setExportBusy(false));
   }
 
@@ -124,7 +133,11 @@ export function ImportClient() {
         setResult(null);
         setExportNote("Loaded your current data above as a starting point.");
       })
-      .catch((e) => setExportNote(e instanceof Error ? e.message : "Export failed."))
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : "Export failed.";
+        setExportNote(msg);
+        toast.error(msg);
+      })
       .finally(() => setExportBusy(false));
   }
 
@@ -133,11 +146,15 @@ export function ImportClient() {
       <section className="today-head animate-fade-up">
         <h1>Import &amp; export</h1>
         <p className="today-date">
-          Ask any AI to design your habits or goals, then paste its JSON back in.
+          Ask any AI to design your habits or goals, then paste its JSON back
+          in.
         </p>
       </section>
 
-      <section className="panel animate-fade-up" style={{ animationDelay: "40ms" }}>
+      <section
+        className="panel animate-fade-up"
+        style={{ animationDelay: "40ms" }}
+      >
         <div className="panel-head">
           <h2>How it works</h2>
         </div>
@@ -151,50 +168,48 @@ export function ImportClient() {
         </ol>
       </section>
 
-      <section className="panel animate-fade-up" style={{ animationDelay: "80ms" }}>
+      <section
+        className="panel animate-fade-up"
+        style={{ animationDelay: "80ms" }}
+      >
         <div className="panel-head">
           <h2>1. Templates for the AI</h2>
         </div>
-        <div className="view-tabs" role="tablist" aria-label="Template">
+        <ToggleGroup
+          type="single"
+          value={tab}
+          onValueChange={(v) => v && setTab(v as TemplateKey)}
+          className="w-full justify-stretch rounded-lg bg-muted p-1"
+          size="sm"
+        >
           {(Object.keys(TEMPLATES) as TemplateKey[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              className={`view-tab ${tab === key ? "active" : ""}`}
-              onClick={() => setTab(key)}
-            >
+            <ToggleGroupItem key={key} value={key} className="flex-1">
               {TEMPLATES[key].label}
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
-        <p className="grid-hint" style={{ marginTop: "0.75rem" }}>
-          {template.hint}
-        </p>
-        <pre className="template-box">{template.prompt}</pre>
-        <div className="io-actions">
-          <button
-            type="button"
-            className="primary-btn small"
-            onClick={() => copy("prompt", template.prompt)}
-          >
-            {copied === "prompt" ? "Copied!" : "Copy prompt"}
-          </button>
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={() => copy("example", JSON.stringify(template.example, null, 2))}
-          >
-            {copied === "example" ? "Copied!" : "Copy example JSON"}
-          </button>
-        </div>
+        </ToggleGroup>
+        <p className="grid-hint mt-3">{template.hint}</p>
+        <CodeBlock
+          className="mt-2"
+          tabs={[
+            { label: "Prompt", code: template.prompt },
+            {
+              label: "Example JSON",
+              code: JSON.stringify(template.example, null, 2),
+              language: "json",
+            },
+          ]}
+        />
       </section>
 
-      <section className="panel animate-fade-up" style={{ animationDelay: "120ms" }}>
+      <section
+        className="panel animate-fade-up"
+        style={{ animationDelay: "120ms" }}
+      >
         <div className="panel-head">
           <h2>2. Paste the AI JSON &amp; import</h2>
         </div>
-        <textarea
-          className="io-textarea"
+        <Textarea
           rows={10}
           value={raw}
           onChange={(e) => {
@@ -205,121 +220,113 @@ export function ImportClient() {
           }}
           placeholder='{ "version": 1, "habits": [ ... ], "goals": [ ... ] }'
           spellCheck={false}
+          className="font-mono text-xs"
         />
 
-        {preview && !preview.ok ? (
-          <div className="preview-block bad">
-            <p className="preview-title">Couldn&apos;t import this yet:</p>
-            <ul className="preview-list">
-              {preview.errors.map((msg, i) => (
-                <li key={`e${i}`}>{msg}</li>
-              ))}
-            </ul>
-            {preview.warnings.length > 0 ? (
-              <ul className="preview-list warn">
+        {pending ? (
+          <Skeleton className="mt-3 h-20 w-full rounded-lg" />
+        ) : preview && !preview.ok ? (
+          <Alert variant="destructive" className="mt-3">
+            <CircleAlert className="size-4" aria-hidden />
+            <AlertDescription>
+              <p className="font-semibold">Couldn&apos;t import this yet:</p>
+              <ul className="mt-1 list-disc space-y-1 pl-5">
+                {preview.errors.map((msg, i) => (
+                  <li key={`e${i}`}>{msg}</li>
+                ))}
                 {preview.warnings.map((msg, i) => (
-                  <li key={`w${i}`}>{msg}</li>
+                  <li key={`w${i}`} className="text-chart-2">
+                    {msg}
+                  </li>
                 ))}
               </ul>
-            ) : null}
-          </div>
-        ) : null}
-
-        {preview && preview.ok ? (
-          <div className="preview-block good">
-            <p className="preview-title">Ready to import:</p>
-            <p className="preview-count">
-              {preview.doc.habits.length} habit(s) · {preview.doc.goals.length}{" "}
-              goal(s)
-              {preview.doc.goals.reduce(
-                (sum, g) => sum + (g.habit_names?.length ?? 0),
-                0,
-              ) > 0
-                ? ` · ${preview.doc.goals.reduce(
-                    (sum, g) => sum + (g.habit_names?.length ?? 0),
-                    0,
-                  )} task link(s)`
-                : ""}
-            </p>
-            {preview.warnings.length > 0 ? (
-              <ul className="preview-list warn">
-                {preview.warnings.map((msg, i) => (
-                  <li key={`w${i}`}>{msg}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        ) : null}
-
-        {result ? (
-          <div className="preview-block done">
-            <p className="preview-title">Imported.</p>
-            <p className="preview-count">
-              {result.habitsCreated} habits · {result.goalsCreated} goals ·{" "}
-              {result.tasksLinked} tasks linked
-              {result.habitsSkipped + result.goalsSkipped > 0
-                ? ` · ${result.habitsSkipped + result.goalsSkipped} already existed (skipped)`
-                : ""}
-            </p>
-            {result.warnings.length > 0 ? (
-              <ul className="preview-list warn">
-                {result.warnings.map((msg, i) => (
-                  <li key={`w${i}`}>{msg}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
+            </AlertDescription>
+          </Alert>
+        ) : preview && preview.ok ? (
+          <Alert className="mt-3">
+            <CircleCheck className="size-4" aria-hidden />
+            <AlertDescription>
+              <p className="font-semibold">Ready to import:</p>
+              <p className="mt-1 tabular-nums">
+                {preview.doc.habits.length} habit(s) ·{" "}
+                {preview.doc.goals.length} goal(s)
+                {preview.doc.goals.reduce(
+                  (sum, g) => sum + (g.habit_names?.length ?? 0),
+                  0,
+                ) > 0
+                  ? ` · ${preview.doc.goals.reduce(
+                      (sum, g) => sum + (g.habit_names?.length ?? 0),
+                      0,
+                    )} task link(s)`
+                  : ""}
+              </p>
+              {preview.warnings.length > 0 ? (
+                <ul className="mt-1 list-disc space-y-1 pl-5 text-chart-2">
+                  {preview.warnings.map((msg, i) => (
+                    <li key={`w${i}`}>{msg}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </AlertDescription>
+          </Alert>
+        ) : result ? (
+          <Alert className="mt-3">
+            <CircleCheck className="size-4" aria-hidden />
+            <AlertDescription>
+              <p className="font-semibold">Imported.</p>
+              <p className="mt-1 tabular-nums">
+                {result.habitsCreated} habits · {result.goalsCreated} goals ·{" "}
+                {result.tasksLinked} tasks linked
+                {result.habitsSkipped + result.goalsSkipped > 0
+                  ? ` · ${result.habitsSkipped + result.goalsSkipped} already existed (skipped)`
+                  : ""}
+              </p>
+              {result.warnings.length > 0 ? (
+                <ul className="mt-1 list-disc space-y-1 pl-5 text-chart-2">
+                  {result.warnings.map((msg, i) => (
+                    <li key={`w${i}`}>{msg}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </AlertDescription>
+          </Alert>
         ) : null}
 
         {error ? <p className="form-error">{error}</p> : null}
 
         <div className="io-actions">
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={onPreview}
-            disabled={!raw.trim()}
-          >
+          <Button variant="secondary" onClick={onPreview} disabled={!raw.trim()}>
             Check JSON
-          </button>
-          <button
-            type="button"
-            className="primary-btn small"
-            onClick={onImport}
-            disabled={pending || !preview?.ok}
-          >
+          </Button>
+          <Button onClick={onImport} disabled={pending || !preview?.ok}>
             {pending ? "Importing…" : "Import"}
-          </button>
+          </Button>
         </div>
       </section>
 
-      <section className="panel animate-fade-up" style={{ animationDelay: "160ms" }}>
+      <section
+        className="panel animate-fade-up"
+        style={{ animationDelay: "160ms" }}
+      >
         <div className="panel-head">
           <h2>3. Export what you have</h2>
         </div>
-        <p className="grid-hint" style={{ marginTop: 0 }}>
-          Grab your current habits and goals as a JSON backup — or load them into
-          the box above to tweak and re-import.
+        <p className="grid-hint mt-0">
+          Grab your current habits and goals as a JSON backup — or load them
+          into the box above to tweak and re-import.
         </p>
         <div className="io-actions">
-          <button
-            type="button"
-            className="primary-btn small"
-            onClick={onExportDownload}
-            disabled={exportBusy}
-          >
+          <Button onClick={onExportDownload} disabled={exportBusy}>
+            <Download className="size-4" aria-hidden />
             {exportBusy ? "Working…" : "Download JSON"}
-          </button>
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={onExportToBox}
-            disabled={exportBusy}
-          >
+          </Button>
+          <Button variant="secondary" onClick={onExportToBox} disabled={exportBusy}>
             Load into box
-          </button>
+          </Button>
         </div>
-        {exportNote ? <p className="field-hint">{exportNote}</p> : null}
+        {exportNote ? (
+          <p className="text-xs text-muted-foreground">{exportNote}</p>
+        ) : null}
       </section>
     </div>
   );

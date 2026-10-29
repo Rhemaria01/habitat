@@ -3,7 +3,7 @@
 import { useMemo, useOptimistic, useTransition, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { toggleHabitDay } from "@/app/actions/habits";
-import { formatLongDate, toDateKey, todayKey } from "@/lib/dates";
+import { LOCALE, formatLongDate, toDateKey, todayKey } from "@/lib/dates";
 import type { HabitKind, HabitLog } from "@/lib/types";
 
 type HeatmapProps = {
@@ -76,7 +76,7 @@ function monthLabels(year: number, weeks: number) {
     if (col >= weeks) continue;
 
     labels.push({
-      label: first.toLocaleString(undefined, { month: "short" }),
+      label: first.toLocaleString(LOCALE, { month: "short" }),
       col,
     });
     lastCol = col;

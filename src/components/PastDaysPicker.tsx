@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import {
+  LOCALE,
   daysBetween,
   formatLongDate,
   parseDateKey,
@@ -52,7 +53,7 @@ function buildMonths(startDate: string, endDate: string): MonthBlock[] {
       const firstSelectable = parseDateKey(days[0]);
       months.push({
         key: `${year}-${month}`,
-        label: firstOfMonth.toLocaleString(undefined, {
+        label: firstOfMonth.toLocaleString(LOCALE, {
           month: "long",
           year: "numeric",
         }),

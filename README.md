@@ -46,7 +46,7 @@ npm run db:generate   # generate the Prisma client from prisma/schema.prisma
 npm run dev
 ```
 
-7. Open [http://localhost:3000](http://localhost:3000), sign in with your `ACCESS_KEY`, plant a habit (try a past quit date), and tap the heatmap.
+7. Open [http://localhost:3001](http://localhost:3001), sign in with your `ACCESS_KEY`, plant a habit (try a past quit date), and tap the heatmap.
 
 ### Optional deploy
 

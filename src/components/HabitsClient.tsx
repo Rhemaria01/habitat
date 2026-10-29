@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { Sprout } from "lucide-react";
+import { toast } from "sonner";
 import {
   DndContext,
   DragOverlay,
@@ -23,6 +25,25 @@ import { reorderHabits } from "@/app/actions/habits";
 import { HabitCard } from "@/components/HabitCard";
 import { HabitForm } from "@/components/HabitForm";
 import type { GoalWithHabits, HabitWithLogs } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
 
 type HabitsClientProps = {
   habits: HabitWithLogs[];
@@ -112,7 +133,10 @@ export function HabitsClient({
 
     startTransition(async () => {
       const result = await reorderHabits(next);
-      if (!result.ok) setOrder(previous);
+      if (!result.ok) {
+        setOrder(previous);
+        toast.error(result.error);
+      }
     });
   }
 
@@ -136,58 +160,62 @@ export function HabitsClient({
   return (
     <div className="habits-page">
       {habits.length === 0 ? (
-        <section className="empty-nest animate-fade-up">
-          <h1>Plant your first habit</h1>
-          <p>
-            Grow a good one, or start counting days free of an old one. Habits
-            are the tasks your goals are made of.
-          </p>
-        </section>
+        <Empty className="animate-fade-up">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Sprout aria-hidden />
+            </EmptyMedia>
+            <EmptyTitle>Plant your first habit</EmptyTitle>
+            <EmptyDescription>
+              Grow a good one, or start counting days free of an old one. Habits
+              are the tasks your goals are made of.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <>
-          <div className="view-tabs" role="tablist" aria-label="Filter habits">
-            <button
-              type="button"
-              className={`view-tab ${filter === "all" ? "active" : ""}`}
-              onClick={() => setFilter("all")}
-            >
+          <ToggleGroup
+            type="single"
+            value={filter}
+            onValueChange={(v) => v && setFilter(v as Filter)}
+            className="w-full justify-stretch rounded-lg bg-muted p-1"
+            size="sm"
+            aria-label="Filter habits"
+          >
+            <ToggleGroupItem value="all" className="flex-1">
               All
-            </button>
-            <button
-              type="button"
-              className={`view-tab ${filter === "build" ? "active" : ""}`}
-              onClick={() => setFilter("build")}
-            >
+            </ToggleGroupItem>
+            <ToggleGroupItem value="build" className="flex-1">
               Good Habits
-            </button>
-            <button
-              type="button"
-              className={`view-tab ${filter === "quit" ? "active" : ""}`}
-              onClick={() => setFilter("quit")}
-            >
+            </ToggleGroupItem>
+            <ToggleGroupItem value="quit" className="flex-1">
               To Quit
-            </button>
-          </div>
+            </ToggleGroupItem>
+          </ToggleGroup>
 
           {goals.length > 0 ? (
-            <label className="field" style={{ marginBottom: "0.75rem" }}>
-              <span>Filter by goal</span>
-              <select
-                value={goalFilter}
-                onChange={(e) => setGoalFilter(e.target.value)}
-              >
-                <option value="all">All goals</option>
-                {goals.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.title}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="mt-3 flex flex-col gap-2">
+              <label htmlFor="goal-filter" className="sr-only">
+                Filter by goal
+              </label>
+              <Select value={goalFilter} onValueChange={setGoalFilter}>
+                <SelectTrigger id="goal-filter" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All goals</SelectItem>
+                  {goals.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           ) : null}
 
           {sortable ? (
-            <p className="grid-hint">Drag the ⋮⋮ handle to rearrange</p>
+            <p className="grid-hint">Drag the handle to rearrange</p>
           ) : null}
 
           {sortable ? (
@@ -222,13 +250,14 @@ export function HabitsClient({
         <div className="panel-head">
           <h2>{open ? "New habit" : "Add a habit"}</h2>
           {habits.length > 0 ? (
-            <button
+            <Button
               type="button"
-              className="ghost-btn"
+              variant="ghost"
+              size="sm"
               onClick={() => setOpen((v) => !v)}
             >
               {open ? "Hide" : "Add"}
-            </button>
+            </Button>
           ) : null}
         </div>
         {open ? (

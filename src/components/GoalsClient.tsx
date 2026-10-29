@@ -1,9 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { Target } from "lucide-react";
 import { GoalCard } from "@/components/GoalCard";
 import { GoalForm } from "@/components/GoalForm";
 import type { GoalWithHabits } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 type GoalsClientProps = {
   goals: GoalWithHabits[];
@@ -22,14 +31,18 @@ export function GoalsClient({ goals }: GoalsClientProps) {
       </section>
 
       {goals.length === 0 && !open ? (
-        <section className="empty-nest animate-fade-up">
-          <h1>No goals yet</h1>
-          <p>
-            A goal is a direction plus an identity. &ldquo;I am a healthy
-            person&rdquo; beats &ldquo;I must lose weight&rdquo; — habits are
-            the votes that prove it.
-          </p>
-        </section>
+        <Empty className="animate-fade-up">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Target aria-hidden />
+            </EmptyMedia>
+            <EmptyTitle>No goals yet</EmptyTitle>
+            <EmptyDescription>
+              A goal is a direction plus an identity. “I am a healthy person”
+              beats “I must lose weight” — habits are the votes that prove it.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <div className="goal-grid">
           {goals.map((goal, i) => (
@@ -45,13 +58,14 @@ export function GoalsClient({ goals }: GoalsClientProps) {
         <div className="panel-head">
           <h2>{open ? "New goal" : "Add a goal"}</h2>
           {goals.length > 0 ? (
-            <button
+            <Button
               type="button"
-              className="ghost-btn"
+              variant="ghost"
+              size="sm"
               onClick={() => setOpen((v) => !v)}
             >
               {open ? "Hide" : "Add"}
-            </button>
+            </Button>
           ) : null}
         </div>
         {open ? <GoalForm onDone={() => setOpen(false)} /> : null}

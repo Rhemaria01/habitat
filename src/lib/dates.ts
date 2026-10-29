@@ -1,5 +1,8 @@
 /** Local YYYY-MM-DD helpers (avoid UTC off-by-one). */
 
+/** Fixed locale so server render and client hydration always match. */
+export const LOCALE = "en-GB";
+
 export function toDateKey(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -48,7 +51,7 @@ export function weekStartKey(key: string): string {
 }
 
 export function formatLongDate(key: string): string {
-  return parseDateKey(key).toLocaleDateString(undefined, {
+  return parseDateKey(key).toLocaleDateString(LOCALE, {
     month: "short",
     day: "numeric",
     year: "numeric",

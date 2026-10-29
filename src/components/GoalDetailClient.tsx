@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOptimistic, useState, useTransition } from "react";
+import { ArrowLeft, Link2, Plus, X } from "lucide-react";
+import { toast } from "sonner";
 import { archiveGoal, linkHabitToGoal, unlinkHabitFromGoal } from "@/app/actions/goals";
 import { toggleHabitDay } from "@/app/actions/habits";
 import { FourLawsPanel } from "@/components/FourLawsPanel";
@@ -12,6 +14,19 @@ import { ProgressRing } from "@/components/GoalCard";
 import { addDays, todayKey } from "@/lib/dates";
 import { computeGoalStats, computeStreakStats } from "@/lib/streaks";
 import type { GoalWithHabits, HabitLog, HabitWithLogs } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type GoalDetailClientProps = {
   goal: GoalWithHabits;
@@ -74,7 +89,11 @@ function TaskRow({
         today,
         todayActive,
       );
-      if (result.ok) router.refresh();
+      if (result.ok) {
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
       onBusyChange(false);
     });
   }
@@ -84,9 +103,9 @@ function TaskRow({
       <div className="task-row" style={{ ["--habit" as string]: habit.color }}>
         <Link href={`/habits/${habit.id}`} className="task-name">
           {habit.name}
-          <span className={`kind-chip ${habit.kind}`}>
+          <Badge variant={habit.kind === "build" ? "secondary" : "destructive"}>
             {habit.kind === "build" ? "Good" : "To quit"}
-          </span>
+          </Badge>
         </Link>
         <span className="task-streak">{stats.currentStreak}d</span>
         <button
@@ -105,15 +124,17 @@ function TaskRow({
               : "Clean"}
         </button>
         {onRemove ? (
-          <button
+          <Button
             type="button"
-            className="ghost-btn remove-task"
+            variant="ghost"
+            size="icon"
+            className="remove-task size-7 text-muted-foreground"
             aria-label={`Remove ${habit.name} from this goal`}
             onClick={onRemove}
             disabled={pendingBusy}
           >
-            ×
-          </button>
+            <X className="size-4" aria-hidden />
+          </Button>
         ) : null}
       </div>
       {nudge ? (
@@ -147,8 +168,11 @@ export function GoalDetailClient({
       const result = await linkHabitToGoal(goal.id, habitId);
       if (!result.ok) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
+      const name = availableHabits.find((h) => h.id === habitId)?.name;
+      if (name) toast.success(`“${name}” connected.`);
       setManaging(true);
       router.refresh();
     });
@@ -160,21 +184,24 @@ export function GoalDetailClient({
       const result = await unlinkHabitFromGoal(goal.id, habitId);
       if (!result.ok) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
+      toast("Task removed from this goal.");
       router.refresh();
     });
   }
 
   function onArchive() {
-    if (!confirm(`Archive “${goal.title}”? Its habits stay in your list.`)) return;
     setError(null);
     startTransition(async () => {
       const result = await archiveGoal(goal.id);
       if (!result.ok) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
+      toast.success(`“${goal.title}” archived.`);
       router.push("/goals");
       router.refresh();
     });
@@ -184,11 +211,18 @@ export function GoalDetailClient({
 
   return (
     <div className="detail" style={{ ["--goal" as string]: goal.color }}>
-      <Link href="/goals" className="back-link animate-fade-up">
-        ← All goals
+      <Link
+        href="/goals"
+        className="back-link animate-fade-up inline-flex items-center gap-1.5"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        All goals
       </Link>
 
-      <section className="detail-hero animate-fade-up" style={{ animationDelay: "40ms" }}>
+      <section
+        className="detail-hero animate-fade-up"
+        style={{ animationDelay: "40ms" }}
+      >
         <div className="goal-hero-top">
           <h1>{goal.title}</h1>
           <ProgressRing percent={stats.percent} />
@@ -203,34 +237,42 @@ export function GoalDetailClient({
         </p>
       </section>
 
-      <div className="identity-banner animate-fade-up" style={{ animationDelay: "80ms" }}>
+      <div
+        className="identity-banner animate-fade-up"
+        style={{ animationDelay: "80ms" }}
+      >
         <p>“{goal.identity_statement}”</p>
         <small>
-          {goal.why
-            ? `${goal.why} — `
-            : ""}
+          {goal.why ? `${goal.why} — ` : ""}
           Every check-in below is a vote for this sentence.
         </small>
       </div>
 
-      <section className="panel animate-fade-up" style={{ animationDelay: "120ms" }}>
+      <section
+        className="panel animate-fade-up"
+        style={{ animationDelay: "120ms" }}
+      >
         <div className="panel-head">
           <h2>Tasks</h2>
           <div className="head-actions">
-            <button
+            <Button
               type="button"
-              className={`ghost-btn ${managing ? "active" : ""}`}
+              variant="ghost"
+              size="sm"
+              className={managing ? "text-primary" : ""}
               onClick={() => setManaging((v) => !v)}
             >
               {managing ? "Done managing" : "Manage"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="ghost-btn"
+              variant="ghost"
+              size="sm"
               onClick={() => setShowAddTask((v) => !v)}
             >
-              {showAddTask ? "Hide" : "+ Task"}
-            </button>
+              <Plus className="size-4" aria-hidden />
+              {showAddTask ? "Hide" : "Task"}
+            </Button>
           </div>
         </div>
 
@@ -247,9 +289,7 @@ export function GoalDetailClient({
                 habit={habit}
                 pendingBusy={busy}
                 onBusyChange={setBusyTask}
-                onRemove={
-                  managing ? () => onUnlink(habit.id) : undefined
-                }
+                onRemove={managing ? () => onUnlink(habit.id) : undefined}
               />
             ))}
           </ul>
@@ -265,15 +305,19 @@ export function GoalDetailClient({
             />
           </div>
         ) : managing && availableHabits.length > 0 ? (
-          <div className="link-manage" style={{ marginTop: "0.9rem" }}>
-            <p className="grid-hint" style={{ margin: 0 }}>
+          <div className="link-manage mt-4">
+            <p className="grid-hint m-0 inline-flex items-center gap-1.5">
+              <Link2 className="size-4" aria-hidden />
               Connect an existing habit as a task:
             </p>
             <ul className="link-pick">
               {availableHabits.map((habit) => (
                 <li key={habit.id}>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
                     disabled={busy}
                     onClick={() => onLink(habit.id)}
                   >
@@ -283,10 +327,12 @@ export function GoalDetailClient({
                       aria-hidden
                     />
                     {habit.name}
-                    <span className={`kind-chip ${habit.kind}`}>
+                    <Badge
+                      variant={habit.kind === "build" ? "secondary" : "destructive"}
+                    >
                       {habit.kind === "build" ? "Good" : "To quit"}
-                    </span>
-                  </button>
+                    </Badge>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -296,43 +342,66 @@ export function GoalDetailClient({
         {error ? <p className="form-error">{error}</p> : null}
       </section>
 
-      <section className="panel animate-fade-up" style={{ animationDelay: "160ms" }}>
+      <section
+        className="panel animate-fade-up"
+        style={{ animationDelay: "160ms" }}
+      >
         <div className="panel-head">
           <h2>Atomic Habits helper</h2>
         </div>
         {hasBuildTasks && hasQuitTasks ? (
-          <>
+          <div className="flex flex-col gap-6">
             <FourLawsPanel mode="build" />
             <FourLawsPanel mode="quit" />
-          </>
+          </div>
         ) : (
-          <FourLawsPanel mode={hasQuitTasks && goal.habits.length > 0 ? "quit" : "build"} />
+          <FourLawsPanel
+            mode={hasQuitTasks && goal.habits.length > 0 ? "quit" : "build"}
+          />
         )}
       </section>
 
-      <section className="panel animate-fade-up" style={{ animationDelay: "200ms" }}>
+      <section
+        className="panel animate-fade-up"
+        style={{ animationDelay: "200ms" }}
+      >
         <div className="panel-head">
           <h2>{editing ? "Edit goal" : "The goal itself"}</h2>
-          <button
+          <Button
             type="button"
-            className="ghost-btn"
+            variant="ghost"
+            size="sm"
             onClick={() => setEditing((v) => !v)}
           >
             {editing ? "Close" : "Edit"}
-          </button>
+          </Button>
         </div>
 
         {editing ? (
           <GoalForm goal={goal} onDone={() => setEditing(false)} />
         ) : (
-          <button
-            type="button"
-            className="danger-btn"
-            onClick={onArchive}
-            disabled={pending}
-          >
-            {pending ? "Archiving…" : "Archive goal"}
-          </button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="destructive" disabled={pending}>
+                {pending ? "Archiving…" : "Archive goal"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Archive “{goal.title}”?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Its habits stay in your list — only the goal is hidden from
+                  your boards.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep it</AlertDialogCancel>
+                <AlertDialogAction onClick={onArchive}>
+                  Archive
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </section>
     </div>

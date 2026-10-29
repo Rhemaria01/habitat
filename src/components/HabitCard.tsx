@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import { useOptimistic, useTransition } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
+import { toast } from "sonner";
 import { toggleHabitDay } from "@/app/actions/habits";
 import { todayKey } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
+import { RollingNumber } from "@/components/ui/rolling-number";
 import type { HabitLog, HabitWithLogs } from "@/lib/types";
 
 type HabitCardProps = {
@@ -52,6 +55,7 @@ function useToggleToday(habit: HabitWithLogs) {
       );
 
       if (result.ok) router.refresh();
+      else toast.error(result.error);
     });
   }
 
@@ -86,7 +90,7 @@ function CardContent({
           tabIndex={interactive ? 0 : -1}
           {...handleProps}
         >
-          <span aria-hidden>⋮⋮</span>
+          <GripVertical className="size-4" aria-hidden />
         </button>
       ) : null}
 
@@ -105,7 +109,9 @@ function CardContent({
               <span className="freq-chip">Weekly</span>
             ) : null}
           </span>
-          <span className="streak-num">{stats.currentStreak}</span>
+          <span className="streak-num">
+            <RollingNumber value={stats.currentStreak} format={(n) => `${n}`} />
+          </span>
         </div>
         <h2>{habit.name}</h2>
         <p className="habit-meta">

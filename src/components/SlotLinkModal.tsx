@@ -2,11 +2,34 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createHabit } from "@/app/actions/habits";
 import { linkHabitToSlot } from "@/app/actions/routine";
 import type { RoutineSlot } from "@/lib/content/routine";
 import { todayKey } from "@/lib/dates";
 import type { HabitKind, HabitWithLogs } from "@/lib/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
+import { Badge } from "@/components/ui/badge";
 
 type SlotLinkModalProps = {
   slot: RoutineSlot;
@@ -17,8 +40,8 @@ type SlotLinkModalProps = {
   onLinked: (slotKey: string, habit: HabitWithLogs) => void;
 };
 
-const NEW_COLOR = "#4FD1A5";
-const NEW_QUIT_COLOR = "#FF7A8A";
+const NEW_COLOR = "#5E6AD2";
+const NEW_QUIT_COLOR = "#F4576B";
 
 export function SlotLinkModal({
   slot,
@@ -40,6 +63,7 @@ export function SlotLinkModal({
       const result = await linkHabitToSlot(slot.key, habit.id);
       if (!result.ok) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
       onLinked(slot.key, habit);
@@ -60,120 +84,123 @@ export function SlotLinkModal({
       });
       if (!result.ok) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
       const link = await linkHabitToSlot(slot.key, result.data.id);
       if (!link.ok) {
         setError(link.error);
+        toast.error(link.error);
         return;
       }
       onLinked(slot.key, { ...result.data, logs: [] });
       router.refresh();
       onClose();
+      toast.success(`“${result.data.name}” created and associated.`);
     });
   }
 
   return (
-    <div className="backdrop" onClick={onClose} role="presentation">
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Associate a habit with ${slot.title}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-head">
-          <h3>Associate with “{slot.title}”</h3>
-          <button type="button" className="ghost-btn" onClick={onClose}>
-            Close
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-[calc(100%-1.5rem)] sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Associate with “{slot.title}”</DialogTitle>
+        </DialogHeader>
 
-        <div className="kind-toggle" role="group" aria-label="Modal mode">
-          <button
-            type="button"
-            className={mode === "pick" ? "active" : ""}
-            onClick={() => setMode("pick")}
-          >
+        <ToggleGroup
+          type="single"
+          value={mode}
+          onValueChange={(v) => v && setMode(v as "pick" | "create")}
+          className="w-full justify-stretch rounded-lg bg-muted p-1"
+          size="sm"
+        >
+          <ToggleGroupItem value="pick" className="flex-1" aria-label="Pick existing">
             Existing habit
-          </button>
-          <button
-            type="button"
-            className={mode === "create" ? "active quit" : ""}
-            onClick={() => setMode("create")}
-          >
+          </ToggleGroupItem>
+          <ToggleGroupItem value="create" className="flex-1" aria-label="Create new">
             New habit
-          </button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
 
         {mode === "pick" ? (
           allHabits.length === 0 ? (
-            <p className="history-picker-hint" style={{ marginTop: "0.9rem" }}>
+            <p className="text-sm text-muted-foreground">
               No habits yet — create one from the “new habit” tab.
             </p>
           ) : (
-            <ul className="link-pick" style={{ marginTop: "0.9rem" }}>
-              {allHabits.map((habit) => {
-                const already = linkedIds.has(habit.id);
-                return (
-                  <li key={habit.id}>
-                    <button
-                      type="button"
-                      disabled={already || pending}
-                      onClick={() => linkExisting(habit)}
-                    >
-                      <span
-                        className="pick-dot"
-                        style={{ background: habit.color }}
-                        aria-hidden
-                      />
-                      {habit.name}
-                      <span className={`kind-chip ${habit.kind}`}>
-                        {habit.kind === "build" ? "Good" : "To quit"}
-                      </span>
-                      {already ? <small>Linked</small> : null}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <Command>
+              <CommandInput placeholder="Search habits…" />
+              <CommandList>
+                <CommandEmpty>No habit matches.</CommandEmpty>
+                <CommandGroup>
+                  {allHabits.map((habit) => {
+                    const already = linkedIds.has(habit.id);
+                    return (
+                      <CommandItem
+                        key={habit.id}
+                        value={habit.name}
+                        disabled={already || pending}
+                        onSelect={() => linkExisting(habit)}
+                      >
+                        <span
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ background: habit.color }}
+                          aria-hidden
+                        />
+                        <span className="min-w-0 flex-1 truncate">{habit.name}</span>
+                        {already ? (
+                          <Badge variant="secondary">Linked</Badge>
+                        ) : (
+                          <Badge variant={habit.kind === "build" ? "default" : "destructive"}>
+                            {habit.kind === "build" ? "Good" : "To quit"}
+                          </Badge>
+                        )}
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
           )
         ) : (
-          <form className="habit-form" onSubmit={createAndLink} style={{ marginTop: "0.9rem" }}>
-            <label className="field">
-              <span>Habit name</span>
-              <input
+          <form className="flex flex-col gap-4" onSubmit={createAndLink}>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="slot-new-habit">Habit name</Label>
+              <Input
+                id="slot-new-habit"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder={newKind === "build" ? "Walk 10,000 steps" : "Scroll in bed"}
                 required
                 maxLength={80}
               />
-            </label>
-            <div className="kind-toggle" role="group" aria-label="Habit type">
-              <button
-                type="button"
-                className={newKind === "build" ? "active" : ""}
-                onClick={() => setNewKind("build")}
-              >
-                Good habit
-              </button>
-              <button
-                type="button"
-                className={newKind === "quit" ? "active quit" : ""}
-                onClick={() => setNewKind("quit")}
-              >
-                Bad habit
-              </button>
             </div>
-            <button type="submit" className="primary-btn" disabled={pending}>
+            <ToggleGroup
+              type="single"
+              value={newKind}
+              onValueChange={(v) => v && setNewKind(v as HabitKind)}
+              className="w-full justify-stretch rounded-lg bg-muted p-1"
+              size="sm"
+            >
+              <ToggleGroupItem value="build" className="flex-1" aria-label="Good habit">
+                Good habit
+              </ToggleGroupItem>
+              <ToggleGroupItem value="quit" className="flex-1" aria-label="Bad habit">
+                Bad habit
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Button type="submit" disabled={pending} className="w-full">
               {pending ? "Linking…" : "Create & associate"}
-            </button>
+            </Button>
           </form>
         )}
 
-        {error ? <p className="form-error" style={{ marginTop: "0.75rem" }}>{error}</p> : null}
-      </div>
-    </div>
+        {error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }

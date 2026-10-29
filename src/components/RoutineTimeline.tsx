@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Check, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { toggleSlotCheck, unlinkHabitFromSlot } from "@/app/actions/routine";
 import { toggleHabitDay } from "@/app/actions/habits";
 import { SlotLinkModal } from "@/components/SlotLinkModal";
@@ -62,6 +64,7 @@ export function RoutineTimeline({
     startTransition(async () => {
       const result = await toggleSlotCheck(slotKey, dateKey);
       if (result.ok) router.refresh();
+      else toast.error(result.error);
     });
   }
 
@@ -90,6 +93,7 @@ export function RoutineTimeline({
         currentlyLogged,
       );
       if (result.ok) router.refresh();
+      else toast.error(result.error);
     });
   }
 
@@ -109,6 +113,7 @@ export function RoutineTimeline({
 
       const result = await unlinkHabitFromSlot(link.slot_key, link.habit.id);
       if (result.ok) router.refresh();
+      else toast.error(result.error);
     });
   }
 
@@ -132,7 +137,7 @@ export function RoutineTimeline({
                 aria-label={`Mark "${slot.title}" ${isDone ? "not done" : "done"}`}
                 onClick={() => onToggleSlot(slot.key)}
               >
-                ✓
+                <Check className="size-[13px]" aria-hidden strokeWidth={3} />
               </button>
               <span className="slot-time">{slot.time}</span>
             </div>
@@ -173,7 +178,8 @@ export function RoutineTimeline({
                       className="chip-add"
                       onClick={() => setModalSlot(slot)}
                     >
-                      + Habit
+                      <Plus className="size-3.5" aria-hidden />
+                      Habit
                     </button>
                   ) : null}
                 </div>
