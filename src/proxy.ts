@@ -7,6 +7,7 @@ import {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isLogin = pathname === "/login";
+  const isKeepAliveCron = pathname === "/api/cron/keep-alive";
   const isPublicAsset =
     pathname.startsWith("/icons") ||
     pathname.startsWith("/_next") ||
@@ -16,7 +17,7 @@ export async function proxy(request: NextRequest) {
     pathname === "/offline" ||
     pathname === "/favicon.ico";
 
-  if (isPublicAsset) {
+  if (isPublicAsset || isKeepAliveCron) {
     return NextResponse.next();
   }
 

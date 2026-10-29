@@ -5,19 +5,19 @@ import { useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
 import { toggleHabitDay } from "@/app/actions/habits";
 import { todayKey } from "@/lib/dates";
-import type { HabitKind, HabitLog } from "@/lib/types";
-import { BorderBeamButton } from "@/components/ui/border-beam-button";
+import type { HabitBehaviorType, HabitLog } from "@/lib/types";
+import { Button } from "@/components/ui/button";
 
 type CheckInButtonProps = {
   habitId: string;
-  kind: HabitKind;
+  behavior: HabitBehaviorType;
   startDate: string;
   logs: HabitLog[];
 };
 
 export function CheckInButton({
   habitId,
-  kind,
+  behavior,
   startDate,
   logs,
 }: CheckInButtonProps) {
@@ -40,33 +40,37 @@ export function CheckInButton({
             id: `optimistic-${today}`,
             habit_id: habitId,
             log_date: today,
-            status: kind === "build" ? "done" : "relapse",
+            status: behavior === "build" ? "completed" : "maintained",
+            note: null,
+            numeric_value: null,
+            completion_level: null,
             created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           },
         ];
       });
 
-      const result = await toggleHabitDay(habitId, kind, today, active);
+      const result = await toggleHabitDay(habitId, behavior, today, active);
       if (result.ok) router.refresh();
       else toast.error(result.error);
     });
   }
 
   return (
-    <BorderBeamButton
+    <Button
       type="button"
-      colorVariant="mono"
-      className={`check-btn large ${active ? "on" : ""} ${kind} animate-pop`}
+      variant={active ? "secondary" : "default"}
+      className={`check-btn large ${active ? "on" : ""} ${behavior}`}
       onClick={onClick}
       aria-pressed={active}
     >
-      {kind === "build"
+      {behavior === "build"
         ? active
           ? "Undo today’s check-in"
           : "I did it today"
         : active
           ? "Clear today’s slip"
-          : "I slipped today"}
-    </BorderBeamButton>
+          : "Log lapse today"}
+    </Button>
   );
 }

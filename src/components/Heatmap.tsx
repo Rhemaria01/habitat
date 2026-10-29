@@ -4,11 +4,11 @@ import { useMemo, useOptimistic, useTransition, type CSSProperties } from "react
 import { useRouter } from "next/navigation";
 import { toggleHabitDay } from "@/app/actions/habits";
 import { LOCALE, formatLongDate, toDateKey, todayKey } from "@/lib/dates";
-import type { HabitKind, HabitLog } from "@/lib/types";
+import type { HabitBehaviorType, HabitLog } from "@/lib/types";
 
 type HeatmapProps = {
   habitId: string;
-  kind: HabitKind;
+  behavior: HabitBehaviorType;
   color: string;
   startDate: string;
   logs: HabitLog[];
@@ -87,7 +87,7 @@ function monthLabels(year: number, weeks: number) {
 
 export function Heatmap({
   habitId,
-  kind,
+  behavior,
   color,
   startDate,
   logs,
@@ -98,13 +98,13 @@ export function Heatmap({
   const [optimisticLogs, setLogs] = useOptimistic(logs);
 
   const activeDates = useMemo(() => {
-    const status = kind === "build" ? "done" : "relapse";
+    const status = behavior === "build" ? "completed" : "maintained";
     return new Set(
       optimisticLogs
         .filter((l) => l.status === status)
         .map((l) => l.log_date),
     );
-  }, [optimisticLogs, kind]);
+  }, [optimisticLogs, behavior]);
 
   const cells = useMemo(
     () => buildYearCells(year, startDate, activeDates),
@@ -123,15 +123,19 @@ export function Heatmap({
             id: `optimistic-${dateKey}`,
             habit_id: habitId,
             log_date: dateKey,
-            status: kind === "build" ? "done" : "relapse",
+            status: behavior === "build" ? "completed" : "lapse",
+            note: null,
+            numeric_value: null,
+            completion_level: null,
             created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           },
         ];
       });
 
       const result = await toggleHabitDay(
         habitId,
-        kind,
+        behavior,
         dateKey,
         currentlyActive,
       );
@@ -183,7 +187,7 @@ export function Heatmap({
                 // Quit: colored = kept (no log), blush = slipped.
                 // Build: colored = kept (done log), muted = missed.
                 const stateClass =
-                  kind === "quit"
+                  behavior !== "build"
                     ? cell.active
                       ? "relapse"
                       : disabled
@@ -193,7 +197,7 @@ export function Heatmap({
                       ? "done"
                       : "";
                 const title = `${formatLongDate(cell.key)}${
-                  kind === "quit"
+                  behavior !== "build"
                     ? cell.active
                       ? " · Slipped"
                       : disabled
@@ -231,7 +235,7 @@ export function Heatmap({
       </div>
 
       <div className="heatmap-legend">
-        {kind === "quit" ? (
+        {behavior !== "build" ? (
           <>
             <span className="heat-cell legend-swatch done" />
             <span>Kept</span>
@@ -249,7 +253,7 @@ export function Heatmap({
         <span className="heat-cell legend-swatch future" />
         <span>Unavailable</span>
         <span className="legend-note">
-          {kind === "build"
+          {behavior === "build"
             ? "Tap a day you kept it"
             : "Tap a day you slipped"}
         </span>

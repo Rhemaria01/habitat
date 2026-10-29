@@ -2,7 +2,7 @@
  * Daily Do's & Don'ts routine. The arc of "moments" (slots) now lives in the
  * `routine_slots` table and is fully editable in-app. The arrays below are the
  * seed content used to bootstrap the table on first run (see
- * supabase/migrate_editable_routine.sql and ensureSlots in actions/routine).
+ * historical SQL seeds / ensureSlots; arcs now live as editable routines).
  * Reference-only lists (weekend rules, five habits, three rules) stay static.
  */
 

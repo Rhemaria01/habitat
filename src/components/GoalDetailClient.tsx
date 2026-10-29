@@ -7,7 +7,7 @@ import { ArrowLeft, Link2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { archiveGoal, linkHabitToGoal, unlinkHabitFromGoal } from "@/app/actions/goals";
 import { toggleHabitDay } from "@/app/actions/habits";
-import { FourLawsPanel } from "@/components/FourLawsPanel";
+import { goalProgress } from "@/lib/domain/goal-progress";
 import { GoalForm } from "@/components/GoalForm";
 import { HabitForm } from "@/components/HabitForm";
 import { ProgressRing } from "@/components/GoalCard";
@@ -51,14 +51,14 @@ function TaskRow({
 
   const today = todayKey();
   const yesterday = addDays(today, -1);
-  const stats = computeStreakStats(habit.kind, habit.start_date, logs, today);
+  const stats = computeStreakStats(habit.behavior_type, habit.start_date, logs, today);
   const todayActive = logs.some((l) => l.log_date === today);
   const canCheckToday = today >= habit.start_date;
   const wasActiveYesterday = logs.some((l) => l.log_date === yesterday);
 
   // "Never miss twice" — missed yesterday, still safe if today gets done.
   const nudge =
-    habit.kind === "build" &&
+    habit.behavior_type === "build" &&
     canCheckToday &&
     !todayActive &&
     !wasActiveYesterday &&
@@ -77,7 +77,11 @@ function TaskRow({
           id: `optimistic-${today}`,
           habit_id: habit.id,
           log_date: today,
-          status: habit.kind === "build" ? "done" : "relapse",
+          status: habit.behavior_type === "build" ? "completed" : "lapse",
+          note: null,
+          numeric_value: null,
+          completion_level: null,
+          updated_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
         };
         return [...current.filter((l) => l.log_date !== today), next];
@@ -85,7 +89,7 @@ function TaskRow({
 
       const result = await toggleHabitDay(
         habit.id,
-        habit.kind,
+        habit.behavior_type,
         today,
         todayActive,
       );
@@ -103,19 +107,19 @@ function TaskRow({
       <div className="task-row" style={{ ["--habit" as string]: habit.color }}>
         <Link href={`/habits/${habit.id}`} className="task-name">
           {habit.name}
-          <Badge variant={habit.kind === "build" ? "secondary" : "destructive"}>
-            {habit.kind === "build" ? "Good" : "To quit"}
+          <Badge variant={habit.behavior_type === "build" ? "secondary" : "destructive"}>
+            {habit.behavior_type}
           </Badge>
         </Link>
         <span className="task-streak">{stats.currentStreak}d</span>
         <button
           type="button"
-          className={`check-btn small ${habit.kind} ${todayActive ? "on" : ""}`}
+          className={`check-btn small ${habit.behavior_type} ${todayActive ? "on" : ""}`}
           onClick={onToggleToday}
           disabled={!canCheckToday || pendingBusy}
           aria-pressed={todayActive}
         >
-          {habit.kind === "build"
+          {habit.behavior_type === "build"
             ? todayActive
               ? "Undo"
               : "Done"
@@ -159,9 +163,6 @@ export function GoalDetailClient({
   const [editing, setEditing] = useState(false);
 
   const stats = computeGoalStats(goal.habits);
-  const hasQuitTasks = goal.habits.some((h) => h.kind === "quit");
-  const hasBuildTasks = goal.habits.some((h) => h.kind === "build");
-
   function onLink(habitId: string) {
     setError(null);
     startTransition(async () => {
@@ -328,9 +329,9 @@ export function GoalDetailClient({
                     />
                     {habit.name}
                     <Badge
-                      variant={habit.kind === "build" ? "secondary" : "destructive"}
+                      variant={habit.behavior_type === "build" ? "secondary" : "destructive"}
                     >
-                      {habit.kind === "build" ? "Good" : "To quit"}
+                      {habit.behavior_type}
                     </Badge>
                   </Button>
                 </li>
@@ -347,17 +348,30 @@ export function GoalDetailClient({
         style={{ animationDelay: "160ms" }}
       >
         <div className="panel-head">
-          <h2>Atomic Habits helper</h2>
+          <h2>Outcome progress</h2>
         </div>
-        {hasBuildTasks && hasQuitTasks ? (
-          <div className="flex flex-col gap-6">
-            <FourLawsPanel mode="build" />
-            <FourLawsPanel mode="quit" />
-          </div>
+        {(() => {
+          const progress = goalProgress(goal);
+          return progress.hasMetric && progress.percent !== null ? (
+            <p className="text-sm">
+              {progress.label} · {progress.percent}%
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">{progress.label}</p>
+          );
+        })()}
+        {goal.systems?.length ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Linked systems: {goal.systems.map((s) => s.name).join(", ")}
+          </p>
         ) : (
-          <FourLawsPanel
-            mode={hasQuitTasks && goal.habits.length > 0 ? "quit" : "build"}
-          />
+          <p className="mt-2 text-sm text-muted-foreground">
+            Link systems on the{" "}
+            <Link href="/systems" className="underline">
+              Systems
+            </Link>{" "}
+            page.
+          </p>
         )}
       </section>
 

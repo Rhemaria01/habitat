@@ -43,7 +43,7 @@ export function HabitDetailClient({ habit }: HabitDetailClientProps) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const stats = computeStreakStats(habit.kind, habit.start_date, habit.logs);
+  const stats = computeStreakStats(habit.behavior_type, habit.start_date, habit.logs);
 
   function onDelete() {
     setError(null);
@@ -81,8 +81,8 @@ export function HabitDetailClient({ habit }: HabitDetailClientProps) {
           className="detail-hero relative z-[1]"
           style={{ ["--habit" as string]: habit.color }}
         >
-        <span className={`kind-chip ${habit.kind}`}>
-          {habit.kind === "build" ? "Growing" : "Quitting"}
+        <span className={`kind-chip ${habit.behavior_type}`}>
+          {habit.behavior_type}
         </span>
         {habit.frequency === "weekly" ? (
           <span className="freq-chip">Weekly</span>
@@ -112,7 +112,7 @@ export function HabitDetailClient({ habit }: HabitDetailClientProps) {
 
           <CheckInButton
             habitId={habit.id}
-            kind={habit.kind}
+            behavior={habit.behavior_type}
             startDate={habit.start_date}
             logs={habit.logs}
           />
@@ -164,7 +164,7 @@ export function HabitDetailClient({ habit }: HabitDetailClientProps) {
           <TabsContent value="month">
             <MonthCalendar
               habitId={habit.id}
-              kind={habit.kind}
+              behavior={habit.behavior_type}
               startDate={habit.start_date}
               logs={habit.logs}
             />
@@ -172,7 +172,7 @@ export function HabitDetailClient({ habit }: HabitDetailClientProps) {
           <TabsContent value="year">
             <Heatmap
               habitId={habit.id}
-              kind={habit.kind}
+              behavior={habit.behavior_type}
               color={habit.color}
               startDate={habit.start_date}
               logs={habit.logs}

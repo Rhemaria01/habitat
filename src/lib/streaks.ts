@@ -1,5 +1,5 @@
 import { addDays, daysBetween, todayKey } from "./dates";
-import type { HabitKind, HabitLog, HabitWithLogs } from "./types";
+import type { HabitBehaviorType, HabitLog, HabitWithLogs } from "./types";
 
 export type StreakStats = {
   currentStreak: number;
@@ -7,19 +7,25 @@ export type StreakStats = {
   bestStreak: number;
 };
 
-function logSet(
-  logs: HabitLog[],
-  status: HabitLog["status"],
-): Set<string> {
+function successDates(logs: HabitLog[], behavior: HabitBehaviorType): Set<string> {
+  const ok =
+    behavior === "build"
+      ? new Set(["completed", "partial"])
+      : new Set(["maintained"]);
   return new Set(
-    logs.filter((log) => log.status === status).map((log) => log.log_date),
+    logs.filter((log) => ok.has(log.status)).map((log) => log.log_date),
+  );
+}
+
+function lapseDates(logs: HabitLog[]): Set<string> {
+  return new Set(
+    logs.filter((log) => log.status === "lapse").map((log) => log.log_date),
   );
 }
 
 function countBuildStreak(doneDates: Set<string>, fromKey: string): number {
   let streak = 0;
   let cursor = fromKey;
-  // Allow streak to still count if today isn't done yet but yesterday was
   if (!doneDates.has(cursor)) {
     cursor = addDays(cursor, -1);
   }
@@ -30,20 +36,18 @@ function countBuildStreak(doneDates: Set<string>, fromKey: string): number {
   return streak;
 }
 
-function countQuitStreak(
+function countReduceStreak(
   startDate: string,
   relapseDates: Set<string>,
   asOf: string,
 ): number {
   if (asOf < startDate) return 0;
-
   let lastRelapse: string | null = null;
   for (const date of relapseDates) {
     if (date >= startDate && date <= asOf) {
       if (!lastRelapse || date > lastRelapse) lastRelapse = date;
     }
   }
-
   const streakStart = lastRelapse ? addDays(lastRelapse, 1) : startDate;
   if (streakStart > asOf) return 0;
   return daysBetween(streakStart, asOf) + 1;
@@ -63,7 +67,7 @@ function bestBuildStreak(doneDates: Set<string>, startDate: string, asOf: string
   return best;
 }
 
-function bestQuitStreak(
+function bestReduceStreak(
   startDate: string,
   relapseDates: Set<string>,
   asOf: string,
@@ -84,7 +88,7 @@ function bestQuitStreak(
 }
 
 export function computeStreakStats(
-  kind: HabitKind,
+  behavior: HabitBehaviorType,
   startDate: string,
   logs: HabitLog[],
   asOf: string = todayKey(),
@@ -92,8 +96,8 @@ export function computeStreakStats(
   const daysSinceStart =
     asOf < startDate ? 0 : daysBetween(startDate, asOf) + 1;
 
-  if (kind === "build") {
-    const done = logSet(logs, "done");
+  if (behavior === "build") {
+    const done = successDates(logs, "build");
     return {
       currentStreak: countBuildStreak(done, asOf),
       daysSinceStart,
@@ -101,19 +105,14 @@ export function computeStreakStats(
     };
   }
 
-  const relapses = logSet(logs, "relapse");
+  const relapses = lapseDates(logs);
   return {
-    currentStreak: countQuitStreak(startDate, relapses, asOf),
+    currentStreak: countReduceStreak(startDate, relapses, asOf),
     daysSinceStart,
-    bestStreak: bestQuitStreak(startDate, relapses, asOf),
+    bestStreak: bestReduceStreak(startDate, relapses, asOf),
   };
 }
 
-/**
- * Did this habit "move this week"?
- * build: at least one done log in the last 7 days.
- * quit: started by then and no relapse in the last 7 days.
- */
 export function movedThisWeek(
   habit: HabitWithLogs,
   asOf: string = todayKey(),
@@ -121,13 +120,15 @@ export function movedThisWeek(
   const weekAgo = addDays(asOf, -6);
   if (habit.start_date > asOf) return false;
 
-  if (habit.kind === "build") {
+  if (habit.behavior_type === "build") {
     return habit.logs.some(
-      (log) => log.status === "done" && log.log_date >= weekAgo,
+      (log) =>
+        (log.status === "completed" || log.status === "partial") &&
+        log.log_date >= weekAgo,
     );
   }
   return !habit.logs.some(
-    (log) => log.status === "relapse" && log.log_date >= weekAgo,
+    (log) => log.status === "lapse" && log.log_date >= weekAgo,
   );
 }
 
@@ -138,27 +139,30 @@ export type GoalStats = {
   votes: number;
 };
 
-/** Weekly consistency for a goal's task list + total identity votes. */
 export function computeGoalStats(
   habits: HabitWithLogs[],
   asOf: string = todayKey(),
 ): GoalStats {
   const total = habits.length;
   const kept = habits.filter((h) => movedThisWeek(h, asOf)).length;
-  const votes = habits.reduce(
-    (sum, h) =>
+  const votes = habits.reduce((sum, h) => {
+    if (h.behavior_type === "build") {
+      return (
+        sum +
+        h.logs.filter((l) => l.status === "completed" || l.status === "partial")
+          .length
+      );
+    }
+    return (
       sum +
-      (h.kind === "build"
-        ? h.logs.filter((l) => l.status === "done").length
-        : // quitting: every clean day since the quit date is a vote
-          Math.max(
-            0,
-            daysBetween(h.start_date, asOf) +
-              1 -
-              h.logs.filter((l) => l.status === "relapse").length,
-          )),
-    0,
-  );
+      Math.max(
+        0,
+        daysBetween(h.start_date, asOf) +
+          1 -
+          h.logs.filter((l) => l.status === "lapse").length,
+      )
+    );
+  }, 0);
   return {
     kept,
     total,

@@ -41,7 +41,11 @@ function useToggleToday(habit: HabitWithLogs) {
           id: `optimistic-${today}`,
           habit_id: habit.id,
           log_date: today,
-          status: habit.kind === "build" ? "done" : "relapse",
+          status: habit.behavior_type === "build" ? "completed" : "lapse",
+          note: null,
+          numeric_value: null,
+          completion_level: null,
+          updated_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
         };
         return [...current.filter((l) => l.log_date !== today), next];
@@ -49,7 +53,7 @@ function useToggleToday(habit: HabitWithLogs) {
 
       const result = await toggleHabitDay(
         habit.id,
-        habit.kind,
+        habit.behavior_type,
         today,
         todayActive,
       );
@@ -76,7 +80,7 @@ function CardContent({
   handleProps?: React.HTMLAttributes<HTMLButtonElement>;
 }) {
   const today = todayKey();
-  const stats = computeStreakStats(habit.kind, habit.start_date, logs, today);
+  const stats = computeStreakStats(habit.behavior_type, habit.start_date, logs, today);
   const todayActive = logs.some((l) => l.log_date === today);
   const canCheckToday = today >= habit.start_date;
 
@@ -102,8 +106,8 @@ function CardContent({
       >
         <div className="habit-card-top">
           <span>
-            <span className={`kind-chip ${habit.kind}`}>
-              {habit.kind === "build" ? "Growing" : "Quitting"}
+            <span className={`kind-chip ${habit.behavior_type}`}>
+              {habit.behavior_type}
             </span>
             {habit.frequency === "weekly" ? (
               <span className="freq-chip">Weekly</span>
@@ -123,12 +127,12 @@ function CardContent({
       {canCheckToday ? (
         <button
           type="button"
-          className={`check-btn ${todayActive ? "on" : ""} ${habit.kind}`}
+          className={`check-btn ${todayActive ? "on" : ""} ${habit.behavior_type}`}
           onClick={onToggleToday}
           aria-pressed={todayActive}
           disabled={!interactive || !onToggleToday}
         >
-          {habit.kind === "build"
+          {habit.behavior_type === "build"
             ? todayActive
               ? "Undo today"
               : "I did it"

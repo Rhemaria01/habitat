@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { Sprout } from "lucide-react";
 import { toast } from "sonner";
@@ -53,7 +54,7 @@ type HabitsClientProps = {
   goalIdsByHabit: Record<string, string[]>;
 };
 
-type Filter = "all" | "build" | "quit";
+type Filter = "all" | "build" | "reduce" | "avoid";
 
 function orderFromHabits(habits: HabitWithLogs[]) {
   return habits.map((h) => h.id);
@@ -93,7 +94,7 @@ export function HabitsClient({
     () =>
       items.filter(
         (h) =>
-          (filter === "all" || h.kind === filter) &&
+          (filter === "all" || h.behavior_type === filter) &&
           (goalFilter === "all" ||
             (goalIdsByHabit[h.id] ?? []).includes(goalFilter)),
       ),
@@ -186,10 +187,13 @@ export function HabitsClient({
               All
             </ToggleGroupItem>
             <ToggleGroupItem value="build" className="flex-1">
-              Good Habits
+              Build
             </ToggleGroupItem>
-            <ToggleGroupItem value="quit" className="flex-1">
-              To Quit
+            <ToggleGroupItem value="reduce" className="flex-1">
+              Reduce
+            </ToggleGroupItem>
+            <ToggleGroupItem value="avoid" className="flex-1">
+              Avoid
             </ToggleGroupItem>
           </ToggleGroup>
 
@@ -249,16 +253,21 @@ export function HabitsClient({
       >
         <div className="panel-head">
           <h2>{open ? "New habit" : "Add a habit"}</h2>
-          {habits.length > 0 ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setOpen((v) => !v)}
-            >
-              {open ? "Hide" : "Add"}
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" asChild>
+              <Link href="/habits/new">Full wizard</Link>
             </Button>
-          ) : null}
+            {habits.length > 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setOpen((v) => !v)}
+              >
+                {open ? "Hide" : "Quick add"}
+              </Button>
+            ) : null}
+          </div>
         </div>
         {open ? (
           <HabitForm goals={goals} onDone={() => setOpen(false)} />

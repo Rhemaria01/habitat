@@ -17,7 +17,7 @@ export function AppShell({ children, wide = false }: AppShellProps) {
         <Link href="/" className="side-brand">
           Habitat
         </Link>
-        <p className="side-tagline">Grow with intention</p>
+        <p className="side-tagline">Your daily systems workspace</p>
         <SideNav />
         <div className="side-foot">
           <ThemeToggle />

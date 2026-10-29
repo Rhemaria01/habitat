@@ -22,7 +22,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Habitat",
   description:
-    "A personal growth space: goals built on identity, habit tracking, a daily do's & don'ts routine, and guides for what you feel.",
+    "Goals, systems, habits, and routines — a calm daily workspace for honest tracking.",
   applicationName: "Habitat",
   appleWebApp: {
     capable: true,

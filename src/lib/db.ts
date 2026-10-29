@@ -2,7 +2,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 /**
- * Server-side Prisma client (Supabase Postgres via the pg driver adapter).
+ * Server-side Prisma client (PostgreSQL via the pg driver adapter).
  * Created lazily on first query so module import never requires DATABASE_URL
  * (build-time page data collection, tests), and cached on globalThis so
  * Next.js hot reloads don't spawn extra connection pools.

@@ -9,11 +9,11 @@ import {
   toDateKey,
   todayKey,
 } from "@/lib/dates";
-import type { HabitKind, HabitLog } from "@/lib/types";
+import type { HabitBehaviorType, HabitLog } from "@/lib/types";
 
 type MonthCalendarProps = {
   habitId: string;
-  kind: HabitKind;
+  behavior: HabitBehaviorType;
   startDate: string;
   logs: HabitLog[];
 };
@@ -63,7 +63,7 @@ function buildMonthCells(
 
 export function MonthCalendar({
   habitId,
-  kind,
+  behavior,
   startDate,
   logs,
 }: MonthCalendarProps) {
@@ -78,13 +78,13 @@ export function MonthCalendar({
   }));
 
   const activeDates = useMemo(() => {
-    const status = kind === "build" ? "done" : "relapse";
+    const status = behavior === "build" ? "completed" : "lapse";
     return new Set(
       optimisticLogs
         .filter((l) => l.status === status)
         .map((l) => l.log_date),
     );
-  }, [optimisticLogs, kind]);
+  }, [optimisticLogs, behavior]);
 
   const cells = useMemo(
     () => buildMonthCells(cursor.year, cursor.month, startDate, activeDates),
@@ -115,7 +115,11 @@ export function MonthCalendar({
             id: `optimistic-${dateKey}`,
             habit_id: habitId,
             log_date: dateKey,
-            status: kind === "build" ? "done" : "relapse",
+            status: behavior === "build" ? "completed" : "lapse",
+            note: null,
+            numeric_value: null,
+            completion_level: null,
+            updated_at: new Date().toISOString(),
             created_at: new Date().toISOString(),
           },
         ];
@@ -123,7 +127,7 @@ export function MonthCalendar({
 
       const result = await toggleHabitDay(
         habitId,
-        kind,
+        behavior,
         dateKey,
         currentlyActive,
       );
@@ -160,7 +164,7 @@ export function MonthCalendar({
             ? cell.future
               ? "future"
               : "before"
-            : kind === "quit"
+            : behavior !== "build"
               ? cell.active
                 ? "relapse"
                 : "kept-quiet"
@@ -168,7 +172,7 @@ export function MonthCalendar({
                 ? "done"
                 : "";
           const mark =
-            kind === "quit"
+            behavior !== "build"
               ? cell.active
                 ? "Slipped"
                 : disabled
@@ -205,7 +209,7 @@ export function MonthCalendar({
       </div>
 
       <div className="heatmap-legend">
-        {kind === "quit" ? (
+        {behavior !== "build" ? (
           <>
             <span className="heat-cell legend-swatch relapse" />
             <span>Slipped</span>

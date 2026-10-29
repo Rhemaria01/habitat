@@ -7,11 +7,11 @@ import { eachDayKey, todayKey } from "@/lib/dates";
 import { dbDate, toHabit, toHabitLog, toHabitWithLogs } from "@/lib/serialize";
 import type {
   Habit,
+  HabitBehaviorType,
   HabitInput,
-  HabitKind,
   HabitLog,
+  HabitLogStatus,
   HabitWithLogs,
-  LogStatus,
 } from "@/lib/types";
 
 export type ActionResult<T = void> =
@@ -22,107 +22,88 @@ async function guard() {
   await requireAuth();
 }
 
-export async function listHabits(): Promise<HabitWithLogs[]> {
-  await guard();
+function legacyKind(behavior: HabitBehaviorType): "build" | "quit" {
+  return behavior === "build" ? "build" : "quit";
+}
 
+function habitData(input: HabitInput) {
+  return {
+    name: input.name.trim(),
+    kind: legacyKind(input.behavior_type),
+    behavior_type: input.behavior_type,
+    description: input.description?.trim() || null,
+    system_id: input.system_id || null,
+    category: input.category?.trim() || null,
+    personal_reason: input.personal_reason?.trim() || null,
+    start_date: dbDate(input.start_date),
+    color: input.color,
+    status: input.status ?? "active",
+    frequency: input.frequency ?? "daily",
+    schedule_kind: input.schedule_kind ?? "daily",
+    schedule_weekdays: input.schedule_weekdays ?? [],
+    schedule_days_per_week: input.schedule_days_per_week ?? null,
+    schedule_custom_days: input.schedule_custom_days ?? [],
+    schedule_end_date: input.schedule_end_date ? dbDate(input.schedule_end_date) : null,
+    time_window: input.time_window ?? null,
+    planned_time: input.planned_time?.trim() || null,
+    stack_after: input.stack_after?.trim() || null,
+    two_minute_version: input.minimum_version?.trim() || null,
+    minimum_version: input.minimum_version?.trim() || null,
+    standard_version: input.standard_version?.trim() || input.name.trim(),
+    stretch_version: input.stretch_version?.trim() || null,
+    estimated_duration_minutes: input.estimated_duration_minutes ?? null,
+    identity_proof: input.identity_proof?.trim() || null,
+    cue_type: input.cue_type || null,
+    cue_time: input.cue_time?.trim() || null,
+    cue_place: input.cue_place?.trim() || null,
+    cue_event: input.cue_event?.trim() || null,
+    anchor_habit_id: input.anchor_habit_id || null,
+    cue_notes: input.cue_notes?.trim() || null,
+    motivation_meaning: input.motivation_meaning?.trim() || null,
+    motivation_appeal: input.motivation_appeal?.trim() || null,
+    motivation_pairing: input.motivation_pairing?.trim() || null,
+    motivation_social: input.motivation_social?.trim() || null,
+    friction_obstacle: input.friction_obstacle?.trim() || null,
+    friction_environment: input.friction_environment?.trim() || null,
+    friction_increase: input.friction_increase?.trim() || null,
+    commitment_mechanism: input.commitment_mechanism?.trim() || null,
+    reward_feedback: input.reward_feedback?.trim() || null,
+    reward_personal: input.reward_personal?.trim() || null,
+    recovery_plan: input.recovery_plan?.trim() || null,
+    recovery_reminder: input.recovery_reminder ?? true,
+    tracking_type: input.tracking_type ?? "binary",
+    tracking_unit: input.tracking_unit?.trim() || null,
+    is_priority: input.is_priority ?? false,
+  };
+}
+
+function validateInput(input: HabitInput): string | null {
+  if (!input.name.trim()) return "Give your habit a name.";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.start_date)) return "Pick a valid start date.";
+  if (!/^#[0-9A-Fa-f]{6}$/.test(input.color)) return "Pick a valid color.";
+  return null;
+}
+
+export async function listHabits(includeArchived = false): Promise<HabitWithLogs[]> {
+  await guard();
   const rows = await prisma.habit.findMany({
-    where: { archived_at: null },
-    orderBy: [{ sort_order: "asc" }, { created_at: "asc" }],
+    where: includeArchived ? {} : { status: { not: "archived" }, archived_at: null },
+    orderBy: [{ is_priority: "desc" }, { sort_order: "asc" }, { created_at: "asc" }],
     include: { logs: { orderBy: { log_date: "asc" } } },
   });
-
   return rows.map(toHabitWithLogs);
 }
 
 export async function getHabit(id: string): Promise<HabitWithLogs | null> {
   await guard();
-
   const row = await prisma.habit.findUnique({
     where: { id },
     include: { logs: { orderBy: { log_date: "asc" } } },
   });
-
   return row ? toHabitWithLogs(row) : null;
 }
 
-function validateInput(input: HabitInput): string | null {
-  if (!input.name.trim()) return "Give your habit a name.";
-  if (input.name.trim().length > 80) return "Keep the name under 80 characters.";
-  if (input.kind !== "build" && input.kind !== "quit") return "Pick a habit type.";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.start_date)) return "Pick a valid start date.";
-  if (!/^#[0-9A-Fa-f]{6}$/.test(input.color)) return "Pick a valid color.";
-  if (input.frequency && input.frequency !== "daily" && input.frequency !== "weekly") {
-    return "Pick a valid frequency.";
-  }
-  for (const [label, value] of [
-    ["stack cue", input.stack_after],
-    ["2-minute version", input.two_minute_version],
-    ["identity proof", input.identity_proof],
-  ] as const) {
-    if (value && value.length > 200) return `Keep the ${label} under 200 characters.`;
-  }
-
-  const today = todayKey();
-
-  if (input.relapse_dates?.length) {
-    if (input.kind !== "quit") {
-      return "Relapse dates are only for quit habits.";
-    }
-    for (const date of input.relapse_dates) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return "Pick valid relapse dates.";
-      }
-      if (date < input.start_date || date > today) {
-        return "Relapse dates must fall between quit date and today.";
-      }
-    }
-  }
-
-  if (input.missed_dates) {
-    if (input.kind !== "build") {
-      return "Missed dates are only for grow habits.";
-    }
-    for (const date of input.missed_dates) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return "Pick valid missed dates.";
-      }
-      if (date < input.start_date || date > today) {
-        return "Missed dates must fall between start date and today.";
-      }
-    }
-  }
-
-  return null;
-}
-
-function logRowsFor(
-  habitId: string,
-  input: HabitInput,
-): { habit_id: string; log_date: Date; status: LogStatus }[] {
-  if (input.kind === "quit") {
-    const relapseDates = [...new Set(input.relapse_dates ?? [])];
-    return relapseDates.map((log_date) => ({
-      habit_id: habitId,
-      log_date: dbDate(log_date),
-      status: "relapse",
-    }));
-  }
-  if (input.missed_dates) {
-    const missed = new Set(input.missed_dates);
-    return eachDayKey(input.start_date, todayKey())
-      .filter((date) => !missed.has(date))
-      .map((log_date) => ({
-        habit_id: habitId,
-        log_date: dbDate(log_date),
-        status: "done",
-      }));
-  }
-  return [];
-}
-
-export async function createHabit(
-  input: HabitInput,
-): Promise<ActionResult<Habit>> {
+export async function createHabit(input: HabitInput): Promise<ActionResult<Habit>> {
   try {
     await guard();
     const invalid = validateInput(input);
@@ -134,42 +115,22 @@ export async function createHabit(
         orderBy: { sort_order: "desc" },
         select: { sort_order: true },
       });
-      const nextOrder = (tail?.sort_order ?? -1) + 1;
-
       const created = await tx.habit.create({
-        data: {
-          name: input.name.trim(),
-          kind: input.kind,
-          start_date: dbDate(input.start_date),
-          color: input.color,
-          sort_order: nextOrder,
-          frequency: input.frequency ?? "daily",
-          stack_after: input.stack_after?.trim() || null,
-          two_minute_version: input.two_minute_version?.trim() || null,
-          identity_proof: input.identity_proof?.trim() || null,
-        },
+        data: { ...habitData(input), sort_order: (tail?.sort_order ?? -1) + 1 },
       });
-
       if (input.goal_id) {
         await tx.goalHabit.create({
           data: { goal_id: input.goal_id, habit_id: created.id },
         });
       }
-
-      const logs = logRowsFor(created.id, input);
-      if (logs.length > 0) {
-        await tx.habitLog.createMany({ data: logs });
-      }
-
       return created;
     });
 
     revalidatePath("/");
     revalidatePath("/habits");
-    revalidatePath("/routine");
     return { ok: true, data: toHabit(habit) };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Unauthorized" };
+    return { ok: false, error: e instanceof Error ? e.message : "Could not create habit." };
   }
 }
 
@@ -181,32 +142,43 @@ export async function updateHabit(
     await guard();
     const invalid = validateInput(input);
     if (invalid) return { ok: false, error: invalid };
-
     const row = await prisma.habit.update({
       where: { id },
-      data: {
-        name: input.name.trim(),
-        kind: input.kind,
-        start_date: dbDate(input.start_date),
-        color: input.color,
-        frequency: input.frequency ?? "daily",
-        stack_after: input.stack_after?.trim() || null,
-        two_minute_version: input.two_minute_version?.trim() || null,
-        identity_proof: input.identity_proof?.trim() || null,
-      },
+      data: habitData(input),
     });
-
     revalidatePath("/");
     revalidatePath("/habits");
     revalidatePath(`/habits/${id}`);
-    revalidatePath("/routine");
-    revalidatePath("/goals");
     return { ok: true, data: toHabit(row) };
   } catch (e) {
-    if (e instanceof Error && e.name === "PrismaClientKnownRequestError") {
-      return { ok: false, error: "Could not update habit." };
-    }
-    return { ok: false, error: e instanceof Error ? e.message : "Unauthorized" };
+    return { ok: false, error: e instanceof Error ? e.message : "Could not update habit." };
+  }
+}
+
+export async function pauseHabit(id: string): Promise<ActionResult> {
+  try {
+    await guard();
+    await prisma.habit.update({ where: { id }, data: { status: "paused" } });
+    revalidatePath("/habits");
+    revalidatePath("/");
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not pause." };
+  }
+}
+
+export async function archiveHabit(id: string): Promise<ActionResult> {
+  try {
+    await guard();
+    await prisma.habit.update({
+      where: { id },
+      data: { status: "archived", archived_at: new Date() },
+    });
+    revalidatePath("/habits");
+    revalidatePath("/");
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not archive." };
   }
 }
 
@@ -214,20 +186,15 @@ export async function deleteHabit(id: string): Promise<ActionResult> {
   try {
     await guard();
     await prisma.habit.deleteMany({ where: { id } });
-
     revalidatePath("/");
     revalidatePath("/habits");
-    revalidatePath("/routine");
-    revalidatePath("/goals");
     return { ok: true, data: undefined };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Unauthorized" };
   }
 }
 
-export async function reorderHabits(
-  orderedIds: string[],
-): Promise<ActionResult> {
+export async function reorderHabits(orderedIds: string[]): Promise<ActionResult> {
   try {
     await guard();
     await prisma.$transaction(
@@ -235,52 +202,58 @@ export async function reorderHabits(
         prisma.habit.update({ where: { id }, data: { sort_order: index } }),
       ),
     );
-
-    revalidatePath("/");
     revalidatePath("/habits");
     return { ok: true, data: undefined };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Unauthorized" };
+    return { ok: false, error: e instanceof Error ? e.message : "Could not reorder." };
   }
 }
 
+/** @deprecated use setHabitLog from today.ts */
 export async function toggleHabitDay(
   habitId: string,
-  kind: HabitKind,
+  behavior: HabitBehaviorType,
   logDate: string,
   currentlyLogged: boolean,
 ): Promise<ActionResult<HabitLog | null>> {
+  const status: HabitLogStatus =
+    behavior === "build" ? "completed" : "maintained";
+  if (currentlyLogged) {
+    const { setHabitLog } = await import("@/app/actions/today");
+    const r = await setHabitLog(habitId, logDate, null);
+    return r.ok ? { ok: true, data: null } : r;
+  }
+  const row = await prisma.habitLog.upsert({
+    where: { habit_id_log_date: { habit_id: habitId, log_date: dbDate(logDate) } },
+    update: { status },
+    create: { habit_id: habitId, log_date: dbDate(logDate), status },
+  });
+  revalidatePath("/");
+  return { ok: true, data: toHabitLog(row) };
+}
+
+export async function seedHistoryFromStart(
+  habitId: string,
+  behavior: HabitBehaviorType,
+  startDate: string,
+  missedDates: string[],
+): Promise<ActionResult> {
   try {
     await guard();
-    const status: LogStatus = kind === "build" ? "done" : "relapse";
-
-    if (currentlyLogged) {
-      await prisma.habitLog.deleteMany({
-        where: { habit_id: habitId, log_date: dbDate(logDate) },
-      });
-      revalidatePath("/");
-      revalidatePath("/habits");
-      revalidatePath(`/habits/${habitId}`);
-      revalidatePath("/routine");
-      revalidatePath("/goals");
-      return { ok: true, data: null };
+    const missed = new Set(missedDates);
+    const logs = eachDayKey(startDate, todayKey())
+      .filter((d) => !missed.has(d))
+      .map((log_date) => ({
+        habit_id: habitId,
+        log_date: dbDate(log_date),
+        status: (behavior === "build" ? "completed" : "maintained") as HabitLogStatus,
+      }));
+    if (logs.length) {
+      await prisma.habitLog.createMany({ data: logs, skipDuplicates: true });
     }
-
-    const row = await prisma.habitLog.upsert({
-      where: {
-        habit_id_log_date: { habit_id: habitId, log_date: dbDate(logDate) },
-      },
-      update: { status },
-      create: { habit_id: habitId, log_date: dbDate(logDate), status },
-    });
-
-    revalidatePath("/");
-    revalidatePath("/habits");
     revalidatePath(`/habits/${habitId}`);
-    revalidatePath("/routine");
-    revalidatePath("/goals");
-    return { ok: true, data: toHabitLog(row) };
+    return { ok: true, data: undefined };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Unauthorized" };
+    return { ok: false, error: e instanceof Error ? e.message : "Could not seed history." };
   }
 }

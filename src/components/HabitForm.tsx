@@ -3,15 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { createHabit, updateHabit } from "@/app/actions/habits";
+import { createHabit, seedHistoryFromStart, updateHabit } from "@/app/actions/habits";
 import { PastDaysPicker } from "@/components/PastDaysPicker";
 import { formatLongDate, todayKey } from "@/lib/dates";
 import type {
   Goal,
   Habit,
   HabitFrequency,
+  HabitBehaviorType,
   HabitInput,
-  HabitKind,
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +64,9 @@ export function HabitForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(habit?.name ?? "");
-  const [kind, setKind] = useState<HabitKind>(habit?.kind ?? "build");
+  const [behavior, setBehavior] = useState<HabitBehaviorType>(
+    habit?.behavior_type ?? "build",
+  );
   const [frequency, setFrequency] = useState<HabitFrequency>(
     habit?.frequency ?? "daily",
   );
@@ -82,12 +84,12 @@ export function HabitForm({
   const [markedDays, setMarkedDays] = useState<Set<string>>(new Set());
 
   const needsHistoryOnboarding = !habit && startDate < todayKey();
-  const isQuit = kind === "quit";
+  const isReduce = behavior !== "build";
   const showGoalPicker = !habit && goals.length > 0;
 
   function resetForm() {
     setName("");
-    setKind("build");
+    setBehavior("build");
     setFrequency("daily");
     setStartDate(todayKey());
     setColor(COLORS[0]);
@@ -103,24 +105,17 @@ export function HabitForm({
     setError(null);
     const payload: HabitInput = {
       name,
-      kind,
+      behavior_type: behavior,
       start_date: startDate,
       color,
       frequency,
       stack_after: stackAfter.trim() || null,
-      two_minute_version: twoMinute.trim() || null,
+      minimum_version: twoMinute.trim() || null,
       identity_proof: identityProof.trim() || null,
     };
 
     if (!habit) {
       if (goalId && goalId !== NO_GOAL) payload.goal_id = goalId;
-      if (historyDates !== null) {
-        if (kind === "quit") {
-          if (historyDates.length > 0) payload.relapse_dates = historyDates;
-        } else {
-          payload.missed_dates = historyDates;
-        }
-      }
     }
 
     startTransition(async () => {
@@ -134,7 +129,16 @@ export function HabitForm({
         return;
       }
 
-      toast.success(habit ? "Habit updated." : `“${result.data.name}” planted.`);
+      if (!habit && historyDates !== null) {
+        await seedHistoryFromStart(
+          result.data.id,
+          behavior,
+          startDate,
+          historyDates,
+        );
+      }
+
+      toast.success(habit ? "Habit updated." : `"${result.data.name}" planted.`);
       resetForm();
       onDone?.();
       router.refresh();
@@ -170,7 +174,7 @@ export function HabitForm({
         <div className="history-ask">
           <h3>Since {formatLongDate(startDate)}</h3>
           <p>
-            {isQuit
+            {isReduce
               ? "We’ll count every day as kept until today. Have you relapsed in between?"
               : "We’ll count every day as kept until today. Have you missed any days?"}
           </p>
@@ -184,18 +188,18 @@ export function HabitForm({
             >
               {pending
                 ? "Saving…"
-                : isQuit
+                : isReduce
                   ? "No, stayed clean"
                   : "No, kept every day"}
             </Button>
             <Button
               type="button"
-              variant={isQuit ? "destructive" : "secondary"}
+              variant={isReduce ? "destructive" : "secondary"}
               disabled={pending}
               onClick={() => setStep("history-pick")}
               className="w-full"
             >
-              {isQuit ? "Yes, I slipped" : "Yes, I missed some"}
+              {isReduce ? "Yes, I slipped" : "Yes, I missed some"}
             </Button>
           </div>
         </div>
@@ -220,7 +224,7 @@ export function HabitForm({
 
         <div className="history-ask">
           <h3>
-            {isQuit ? "Which days did you slip?" : "Which days did you miss?"}
+            {isReduce ? "Which days did you slip?" : "Which days did you miss?"}
           </h3>
         </div>
 
@@ -228,7 +232,7 @@ export function HabitForm({
           startDate={startDate}
           selected={markedDays}
           onChange={setMarkedDays}
-          mode={isQuit ? "slip" : "miss"}
+          mode={isReduce ? "slip" : "miss"}
         />
 
         {error ? <p className="form-error">{error}</p> : null}
@@ -243,7 +247,7 @@ export function HabitForm({
             ? "Saving…"
             : markedDays.size === 0
               ? "Plant habit · all kept"
-              : isQuit
+              : isReduce
                 ? `Plant habit · ${markedDays.size} slip${markedDays.size === 1 ? "" : "s"}`
                 : `Plant habit · ${markedDays.size} miss${markedDays.size === 1 ? "" : "es"}`}
         </Button>
@@ -262,7 +266,7 @@ export function HabitForm({
           id="habit-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={kind === "quit" ? "Quit smoking" : "Morning stretch"}
+          placeholder={behavior !== "build" ? "Quit smoking" : "Morning stretch"}
           required
           maxLength={80}
         />
@@ -270,16 +274,19 @@ export function HabitForm({
 
       <ToggleGroup
         type="single"
-        value={kind}
-        onValueChange={(v) => v && setKind(v as HabitKind)}
+        value={behavior}
+        onValueChange={(v) => v && setBehavior(v as HabitBehaviorType)}
         className="w-full justify-stretch rounded-lg bg-muted p-1"
         size="sm"
       >
         <ToggleGroupItem value="build" className="flex-1" aria-label="Grow a habit">
           Grow a habit
         </ToggleGroupItem>
-        <ToggleGroupItem value="quit" className="flex-1" aria-label="Quit a habit">
-          Quit a habit
+        <ToggleGroupItem value="reduce" className="flex-1" aria-label="Reduce a habit">
+          Reduce
+        </ToggleGroupItem>
+        <ToggleGroupItem value="avoid" className="flex-1" aria-label="Avoid a habit">
+          Avoid
         </ToggleGroupItem>
       </ToggleGroup>
 
@@ -299,7 +306,7 @@ export function HabitForm({
       </ToggleGroup>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="habit-start">{kind === "quit" ? "Quit date" : "Started on"}</Label>
+        <Label htmlFor="habit-start">{behavior !== "build" ? "Quit date" : "Started on"}</Label>
         <Input
           id="habit-start"
           type="date"
@@ -314,7 +321,7 @@ export function HabitForm({
         <Alert>
           <Lightbulb className="size-4" aria-hidden />
           <AlertDescription>
-            {isQuit
+            {isReduce
               ? "Past quit date — next we’ll ask if you relapsed since then. Days stay clean by default."
               : "Past start date — next we’ll ask if you missed any days. Days count as kept by default."}
           </AlertDescription>

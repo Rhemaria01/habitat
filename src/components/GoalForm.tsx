@@ -92,8 +92,7 @@ export function GoalForm({ goal, onDone, compact }: GoalFormProps) {
           value={identity}
           onChange={(e) => setIdentity(e.target.value)}
           placeholder="I am a healthy person"
-          required
-          maxLength={120}
+          maxLength={200}
         />
         <p className="text-xs text-muted-foreground">
           Every check-in towards this goal is a vote for this sentence.
