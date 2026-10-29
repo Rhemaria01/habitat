@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Target } from "lucide-react";
 import { GoalCard } from "@/components/GoalCard";
 import { GoalForm } from "@/components/GoalForm";
-import type { GoalWithHabits } from "@/lib/types";
+import type { GoalWithHabits, HabitWithLogs } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -16,9 +16,10 @@ import {
 
 type GoalsClientProps = {
   goals: GoalWithHabits[];
+  allHabits: HabitWithLogs[];
 };
 
-export function GoalsClient({ goals }: GoalsClientProps) {
+export function GoalsClient({ goals, allHabits }: GoalsClientProps) {
   const [open, setOpen] = useState(goals.length === 0);
 
   return (
@@ -46,7 +47,12 @@ export function GoalsClient({ goals }: GoalsClientProps) {
       ) : (
         <div className="goal-grid">
           {goals.map((goal, i) => (
-            <GoalCard key={goal.id} goal={goal} index={i} />
+            <GoalCard
+              key={goal.id}
+              goal={goal}
+              index={i}
+              allHabits={allHabits}
+            />
           ))}
         </div>
       )}

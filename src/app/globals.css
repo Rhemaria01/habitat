@@ -1671,6 +1671,10 @@ h3 {
   max-width: none;
 }
 
+.goal-halo-wrap {
+  min-width: 0;
+}
+
 /* Inner content of the HaloCard — halo owns the surface chrome. */
 .goal-card {
   --goal: var(--chart-4);

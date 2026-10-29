@@ -20,10 +20,11 @@ Track habits you’re **growing**, or days since you **quit** something — incl
 
 ## Your setup steps
 
-1. **Create a Supabase project** at [supabase.com](https://supabase.com).
-2. Open **SQL Editor**, paste and run [`supabase/schema.sql`](supabase/schema.sql).  
-   If you already created the tables earlier, also run [`supabase/migrate_sort_order.sql`](supabase/migrate_sort_order.sql) and [`supabase/migrate_growth_features.sql`](supabase/migrate_growth_features.sql) once (the latter adds goals, routine links, weekly reviews, and the new habit columns).
-3. In **Project Settings → Database**, copy the **URI connection string** (host `xxx.supabase.co`, port `5432`, password auth). Prisma talks to Postgres directly — no anon/publishable key needed.
+1. **Provision PostgreSQL** (local Docker, Neon, Railway, Supabase, etc.) — any Postgres 14+ works.
+2. Apply the schema once against that database (psql, your host’s SQL console, or `psql $DATABASE_URL -f …`):
+   - [`supabase/schema.sql`](supabase/schema.sql)
+   - If you already created the tables earlier, also run [`supabase/migrate_sort_order.sql`](supabase/migrate_sort_order.sql) and [`supabase/migrate_growth_features.sql`](supabase/migrate_growth_features.sql) once (the latter adds goals, routine links, weekly reviews, and the new habit columns).
+3. Copy your **Postgres connection URI** into `DATABASE_URL`. Prisma uses it directly; no separate auth SDK or publishable keys.
 4. In this repo, create `.env.local`:
 
 ```bash
@@ -33,7 +34,7 @@ cp .env.example .env.local
 5. Fill in:
 
 ```bash
-DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@xxx.supabase.co:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require
 ACCESS_KEY=your-private-passphrase   # never commit this; .env.local only
 SESSION_SECRET= # run: openssl rand -hex 32
 ```
@@ -72,9 +73,9 @@ npm run build        # production build with webpack (generates service worker)
 npm run start        # serve production build
 npm run lint
 npm run db:generate  # regenerate Prisma client (src/generated/prisma)
-npm run db:pull      # introspect the live Supabase schema into prisma/schema.prisma
+npm run db:pull      # introspect the live database into prisma/schema.prisma
 ```
 
 ## Stack
 
-Next.js App Router · TypeScript · Tailwind CSS · Prisma (`@prisma/client` + `@prisma/adapter-pg` over Supabase Postgres) · `@ducanh2912/next-pwa`
+Next.js App Router · TypeScript · Tailwind CSS · Prisma (`@prisma/client` + `@prisma/adapter-pg` over PostgreSQL) · `@ducanh2912/next-pwa`

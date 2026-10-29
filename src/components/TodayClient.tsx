@@ -101,7 +101,12 @@ export function TodayClient({
         ) : (
           <div className="goal-grid">
             {goals.slice(0, 2).map((goal, i) => (
-              <GoalCard key={goal.id} goal={goal} index={i} />
+              <GoalCard
+                key={goal.id}
+                goal={goal}
+                index={i}
+                allHabits={allHabits}
+              />
             ))}
           </div>
         )}
