@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useStaggerHabitGrid } from "@/components/animated/AnimatedHabitCard";
 import { LayoutGrid, List, Plus, Search, Sprout } from "lucide-react";
 import {
@@ -28,9 +29,19 @@ import {
 } from "@/components/api/QueryLoading";
 import { HabitCard } from "@/components/HabitCard";
 import { useHabitsQuery } from "@/hooks/api/use-habits";
-import { useReorderHabitsMutation } from "@/hooks/api/use-mutations";
+import { useDeleteHabitMutation, useReorderHabitsMutation } from "@/hooks/api/use-mutations";
 import type { HabitWithLogs } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Empty,
   EmptyDescription,
@@ -72,6 +83,9 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
   const reorderMutation = useReorderHabitsMutation();
 
   const [addOpen, setAddOpen] = useState(habits.length === 0);
+  const [editHabit, setEditHabit] = useState<HabitWithLogs | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<HabitWithLogs | null>(null);
+  const deleteMutation = useDeleteHabitMutation(deleteTarget?.id ?? "");
   const [filter, setFilter] = useState<Filter>("all");
   const [view, setView] = useState<ViewMode>("grid");
   const [query, setQuery] = useState("");
@@ -135,6 +149,22 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
     });
   }
 
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    const name = deleteTarget.name;
+    deleteMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(`“${name}” deleted.`);
+        setDeleteTarget(null);
+      },
+    });
+  }
+
+  const cardActions = {
+    onEdit: (habit: HabitWithLogs) => setEditHabit(habit),
+    onDelete: (habit: HabitWithLogs) => setDeleteTarget(habit),
+  };
+
   const gridRef = useRef<HTMLElement>(null);
 
   useStaggerHabitGrid(gridRef, ".habit-card", [filter, query, filtered.length, view]);
@@ -154,7 +184,13 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
       ) : null}
       {filtered.map((habit, index) =>
         sortable ? (
-          <HabitCard key={habit.id} habit={habit} index={index} layout={view} />
+          <HabitCard
+            key={habit.id}
+            habit={habit}
+            index={index}
+            layout={view}
+            {...cardActions}
+          />
         ) : (
           <HabitCard
             key={habit.id}
@@ -162,6 +198,7 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
             index={index}
             sortable={false}
             layout={view}
+            {...cardActions}
           />
         ),
       )}
@@ -285,7 +322,43 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
         </>
       )}
 
-      <AddHabitDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddHabitDialog
+        open={addOpen || editHabit !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAddOpen(false);
+            setEditHabit(null);
+          }
+        }}
+        habit={editHabit}
+      />
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete “{deleteTarget?.name ?? "this habit"}”?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the habit and all check-in history. It can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
         </>
       )}
     </div>

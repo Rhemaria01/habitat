@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const profile = await getProfile();
   return (
-    <AppShell wide>
+    <AppShell wide statsLayout>
       <header className="page-head mb-2 animate-fade-up">
         <h1>Settings</h1>
         <p className="page-sub">

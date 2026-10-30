@@ -291,12 +291,17 @@ h3 {
   background:
     linear-gradient(
       180deg,
-      rgba(232, 233, 223, 0.94) 0%,
-      rgba(232, 233, 223, 0.82) 45%,
-      rgba(232, 233, 223, 0.55) 100%
+      rgba(242, 243, 235, 0.96) 0%,
+      rgba(236, 238, 228, 0.9) 38%,
+      rgba(232, 233, 223, 0.82) 72%,
+      rgba(232, 233, 223, 0.72) 100%
     ),
-    url("/images/sidebar-motif.jpg") center 85% / cover no-repeat;
-  opacity: 0.85;
+    url("/images/sidebar-motif-light.jpg") center 88% / cover no-repeat;
+  opacity: 1;
+}
+
+[data-theme="light"] .side-tagline {
+  color: var(--habitat-muted);
 }
 
 .side-brand {
@@ -3376,6 +3381,68 @@ h3 {
   margin-top: 0;
 }
 
+[data-theme="light"] .shell-main.scenic-scene {
+  --scenic-fade: #e8e9df;
+  --scenic-photo: url("/images/scenery-today-light.jpg");
+  --scenic-text-scrim: linear-gradient(
+    to bottom,
+    rgba(242, 243, 235, 0.94) 0%,
+    rgba(242, 243, 235, 0.78) 14%,
+    rgba(236, 238, 228, 0.45) 32%,
+    rgba(232, 233, 223, 0.12) 48%,
+    transparent 62%
+  );
+  --scenic-bottom-fade: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 24%,
+    color-mix(in srgb, var(--scenic-fade) 8%, transparent) 40%,
+    color-mix(in srgb, var(--scenic-fade) 28%, transparent) 52%,
+    color-mix(in srgb, var(--scenic-fade) 52%, transparent) 64%,
+    color-mix(in srgb, var(--scenic-fade) 72%, transparent) 78%,
+    color-mix(in srgb, var(--scenic-fade) 88%, transparent) 90%,
+    var(--scenic-fade) 100%
+  );
+  background-color: var(--scenic-fade);
+}
+
+[data-theme="light"] .shell-main.scenic-scene::before {
+  background-position: center bottom, center top, center 42%;
+}
+
+[data-theme="light"] .shell-main.scenic-scene.today-layout .today-hero h1 {
+  color: var(--habitat-text);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+[data-theme="light"] .shell-main.scenic-scene.today-layout .today-tagline {
+  color: var(--habitat-muted);
+}
+
+[data-theme="light"] .shell-main.scenic-scene.today-layout .today-date-nav-caption {
+  color: var(--habitat-text);
+}
+
+[data-theme="light"] .shell-main.scenic-scene.today-layout .today-date-nav {
+  border-color: rgba(32, 35, 33, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+[data-theme="light"] .shell-main.scenic-scene.today-layout .today-date-today-btn:hover:not(:disabled) {
+  background: rgba(32, 35, 33, 0.06);
+}
+
+[data-theme="light"] .shell-main.scenic-scene.today-layout .today-page .glass-panel,
+[data-theme="light"] .shell-main.scenic-scene.today-layout .today-page .dash-stat.glass-panel {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(32, 35, 33, 0.1);
+}
+
+[data-theme="light"] .shell-main.scenic-scene.today-layout .today-list-panel {
+  background: color-mix(in srgb, var(--habitat-surface) 88%, transparent);
+  border-color: rgba(32, 35, 33, 0.08);
+}
+
 .today-page {
   display: flex;
   flex-direction: column;
@@ -4033,6 +4100,257 @@ h3 {
   opacity: 0.92;
 }
 
+.habit-cover-style-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.habit-cover-style-btn {
+  display: grid;
+  grid-template-columns: 2.85rem minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border-radius: calc(var(--radius) + 2px);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--foreground) 3%, var(--card));
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+.habit-cover-style-btn:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+}
+
+.habit-cover-style-btn.selected {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 28%, transparent);
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+}
+
+.habit-cover-style-thumb {
+  aspect-ratio: 3 / 4;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  overflow: hidden;
+}
+
+.habit-cover-style-thumb--corner {
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--chart-1) 18%, var(--card)), var(--card)),
+    radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--chart-2) 35%, transparent), transparent 58%);
+}
+
+.habit-cover-style-thumb--image {
+  background:
+    linear-gradient(to top, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.1)),
+    url("/images/scenery-morning.jpg") center / cover no-repeat;
+}
+
+.habit-cover-style-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.habit-cover-style-copy strong {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.habit-cover-style-copy span {
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+  line-height: 1.35;
+}
+
+.habit-card-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.habit-card-cover-photo {
+  object-fit: cover;
+  object-position: center 38%;
+  transform: scale(1.04);
+}
+
+.habit-card-cover-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.38) 45%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+
+.habit-card-preview {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 100%;
+  min-height: 17.5rem;
+  border-radius: calc(var(--radius) + 10px);
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  background: color-mix(in srgb, var(--habitat-surface) 84%, transparent);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--foreground) 8%, transparent),
+    0 16px 40px rgba(0, 0, 0, 0.28);
+}
+
+.habit-card-preview > :not(.habit-card-cover):not(.habit-card-corner-art) {
+  position: relative;
+  z-index: 1;
+}
+
+.habit-card-preview--image {
+  justify-content: flex-end;
+  padding: 0;
+  min-height: 18.5rem;
+  background: #0c100e;
+  border-color: color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+.habit-card-preview-overlay-copy {
+  position: relative;
+  z-index: 2;
+  padding: 1.05rem 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: #fff;
+}
+
+.habit-card-preview-overlay-copy h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.habit-card-preview-overlay-copy p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.habit-card-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.habit-card-preview-title h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.habit-card-preview-week {
+  margin-top: auto;
+}
+
+.habits-page .habit-card-v2.habit-card-v2--cover-image {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+.habit-card-cover-scrim--photo {
+  background: color-mix(in srgb, var(--habitat-bg, #121614) 52%, transparent);
+}
+
+.habit-cover-image-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.habit-cover-image-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: stretch;
+  padding: 0.35rem;
+  border-radius: calc(var(--radius) + 2px);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--foreground) 3%, var(--card));
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.habit-cover-image-btn:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+
+.habit-cover-image-btn.selected {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+.habit-cover-image-thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 0.45rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.habit-cover-image-thumb-img {
+  object-fit: cover;
+}
+
+.habit-cover-image-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  line-height: 1.25;
+  padding: 0 0.1rem;
+}
+
+.habit-card-v2-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.habit-card-preview.habit-card-v2 {
+  min-height: 17.5rem;
+  width: 100%;
+}
+
+.habit-card-preview.habit-card-v2--cover-image {
+  background: transparent;
+}
+
 @media (max-width: 480px) {
   .habit-art-picker {
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -4216,7 +4534,101 @@ h3 {
 /* ---------- add habit modal ---------- */
 
 .habit-add-dialog[data-slot="dialog-content"] {
-  overflow: visible;
+  width: min(calc(100vw - 1rem), 56rem);
+  max-width: min(calc(100vw - 1rem), 56rem) !important;
+  padding: 0;
+  overflow: hidden;
+  border-radius: calc(var(--radius) + 12px);
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  background: color-mix(in srgb, var(--habitat-surface, var(--popover)) 94%, transparent);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  box-shadow:
+    0 32px 90px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.habit-add-dialog[data-slot="dialog-content"] > [data-slot="dialog-close"] {
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 30;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--background) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.habit-create-modal.modal {
+  max-width: none;
+  width: 100%;
+  max-height: min(90dvh, 42rem);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  animation: none;
+}
+
+.habit-create-shell {
+  display: grid;
+  grid-template-columns: 17.5rem minmax(0, 1fr);
+  min-height: min(78dvh, 38rem);
+  max-height: min(90dvh, 42rem);
+}
+
+.habit-create-preview-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1.1rem 1rem 1.1rem 1.15rem;
+  background:
+    radial-gradient(
+      120% 80% at 50% 0%,
+      color-mix(in srgb, var(--chart-1) 12%, transparent),
+      transparent 55%
+    ),
+    color-mix(in srgb, var(--foreground) 3%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.habit-create-preview-label {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.habit-create-preview-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 0.25rem 0;
+}
+
+.habit-create-form-pane {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: min(90dvh, 42rem);
+  background: color-mix(in srgb, var(--card) 40%, transparent);
+}
+
+.habit-create-form-head {
+  flex-shrink: 0;
+  padding: 1rem 1.15rem 0.35rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.habit-create-form-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 0.85rem 1.15rem 1rem;
+  min-height: 0;
 }
 
 .habit-modal.modal {
@@ -4239,6 +4651,22 @@ h3 {
 
 .habit-form-modal {
   gap: 0.65rem;
+}
+
+.habit-form-modal .icon-picker,
+.habit-form-modal .emoji-picker {
+  max-height: 8.25rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.1rem;
+}
+
+.habit-form-modal .habit-cover-style-picker {
+  gap: 0.35rem;
+}
+
+.habit-form-modal .habit-art-picker {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .habit-form-modal label {
@@ -4302,6 +4730,48 @@ h3 {
   margin-top: 0.15rem;
   padding-top: 0.55rem;
   border-top: 1px solid var(--border);
+  position: sticky;
+  bottom: 0;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  backdrop-filter: blur(8px);
+  padding-bottom: 0.15rem;
+  margin-left: -1.15rem;
+  margin-right: -1.15rem;
+  padding-left: 1.15rem;
+  padding-right: 1.15rem;
+}
+
+@media (max-width: 767px) {
+  .habit-create-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    max-height: min(92dvh, none);
+  }
+
+  .habit-create-preview-pane {
+    border-right: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+    padding: 0.85rem 1rem;
+  }
+
+  .habit-create-preview-stage {
+    max-height: 11.5rem;
+  }
+
+  .habit-card-preview {
+    min-height: 11rem !important;
+  }
+
+  .habit-card-preview--image {
+    min-height: 11rem !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .habit-create-preview-stage .habit-card-preview {
+    width: 100%;
+    max-width: 15.5rem;
+  }
 }
 
 .symbol-picker {
@@ -4472,8 +4942,8 @@ h3 {
 .habit-card-corner-art-img {
   object-fit: contain;
   object-position: 100% 100%;
-  opacity: 0.54;
-  filter: saturate(0.78) brightness(1.06);
+  opacity: 0.72;
+  filter: saturate(0.88) brightness(1.1);
 }
 
 .habits-page .habit-card-v2 {
@@ -4507,7 +4977,7 @@ h3 {
 }
 
 .habits-page .habit-card-v2.habit-card-row .habit-card-corner-art-img {
-  opacity: 0.46;
+  opacity: 0.60;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4525,6 +4995,25 @@ h3 {
   padding: 0.65rem 0.75rem;
   flex-direction: row;
   align-items: center;
+  position: relative;
+}
+
+.habit-card-row-actions {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.05rem;
+}
+
+.habits-page .habit-card-v2.habit-card-row:has(.habit-card-row-actions) {
+  padding-right: 4.25rem;
+}
+
+.habit-card-row-actions .drag-handle {
+  position: static;
 }
 
 .habit-card-v2-head {

@@ -4,6 +4,8 @@ export type DayPeriod = "morning" | "afternoon" | "evening" | "night";
 
 /** Single scenic photo for the Today dashboard (main column). */
 export const TODAY_SCENIC_IMAGE = "/images/scenery-today.jpg";
+export const TODAY_SCENIC_IMAGE_LIGHT = "/images/scenery-today-light.jpg";
+export const SIDEBAR_MOTIF_LIGHT = "/images/sidebar-motif-light.jpg";
 
 const SCENIC_BY_PERIOD: Record<DayPeriod, string> = {
   morning: "/images/scenery-morning.jpg",

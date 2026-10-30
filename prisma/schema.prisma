@@ -94,6 +94,7 @@ model Habit {
   is_priority                Boolean             @default(false)
   card_art_key               String?
   card_cover_style           String?
+  card_cover_image_key       String?
   logs                       HabitLog[]
   anchor_habit               Habit?              @relation("HabitAnchor", fields: [anchor_habit_id], references: [id], onDelete: SetNull)
   anchored_by                Habit[]             @relation("HabitAnchor")

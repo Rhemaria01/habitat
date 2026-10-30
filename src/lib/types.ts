@@ -48,6 +48,7 @@ export type Habit = {
   source_key: string | null;
   card_art_key: string | null;
   card_cover_style: string | null;
+  card_cover_image_key: string | null;
   cue_type: string | null;
   cue_time: string | null;
   cue_place: string | null;
@@ -107,6 +108,7 @@ export type HabitInput = {
   icon?: string | null;
   card_art_key?: string | null;
   card_cover_style?: string | null;
+  card_cover_image_key?: string | null;
   frequency?: HabitFrequency;
   schedule_kind?: ScheduleKind;
   schedule_weekdays?: number[];

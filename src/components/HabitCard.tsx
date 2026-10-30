@@ -4,15 +4,21 @@ import Link from "next/link";
 import { useOptimistic, type HTMLAttributes } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, Flame, MoreVertical } from "lucide-react";
+import { Check, Flame } from "lucide-react";
 import { HabitIcon } from "@/components/HabitIcon";
 import { useToggleHabitDayMutation } from "@/hooks/api/use-mutations";
 import { addDays, todayKey } from "@/lib/dates";
 import { formatScheduleLabel } from "@/lib/domain/schedule";
 import { computeStreakStats } from "@/lib/streaks";
 import { AnimatedHabitCard } from "@/components/animated/AnimatedHabitCard";
+import { HabitCardActionsMenu } from "@/components/HabitCardActionsMenu";
 import { HabitCardCornerArt } from "@/components/HabitCardCornerArt";
+import { HabitCardCover } from "@/components/HabitCardCover";
 import { resolveHabitCardArtSrc } from "@/lib/content/habit-card-art";
+import {
+  resolveHabitCardCoverStyle,
+  resolveHabitCoverImageKey,
+} from "@/lib/content/habit-card-cover";
 import type { HabitBehaviorType, HabitLog, HabitWithLogs } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +28,8 @@ type HabitCardProps = {
   overlay?: boolean;
   sortable?: boolean;
   layout?: "grid" | "list";
+  onEdit?: (habit: HabitWithLogs) => void;
+  onDelete?: (habit: HabitWithLogs) => void;
 };
 
 const WEEK_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -107,6 +115,8 @@ type CardContentProps = {
   interactive: boolean;
   layout: "grid" | "list";
   handleProps?: HTMLAttributes<HTMLButtonElement>;
+  onEdit?: (habit: HabitWithLogs) => void;
+  onDelete?: (habit: HabitWithLogs) => void;
 };
 
 function CardContent({
@@ -116,6 +126,8 @@ function CardContent({
   interactive,
   layout,
   handleProps,
+  onEdit,
+  onDelete,
 }: CardContentProps) {
   const today = todayKey();
   const stats = computeStreakStats(habit.behavior_type, habit.start_date, logs, today);
@@ -127,20 +139,31 @@ function CardContent({
   const weekPct = Math.round((weekDone / 7) * 100);
   const isQuit = habit.behavior_type === "avoid" || habit.behavior_type === "reduce";
 
+  const showActions = interactive && (onEdit || onDelete);
+
   if (layout === "list") {
     return (
       <>
-        {handleProps ? (
-          <button
-            type="button"
-            className="drag-handle habit-card-v2-menu"
-            aria-label={`Drag to reorder ${habit.name}`}
-            tabIndex={interactive ? 0 : -1}
-            {...handleProps}
-          >
-            <MoreVertical className="size-4" aria-hidden />
-          </button>
-        ) : null}
+        <div className="habit-card-row-actions">
+          {showActions ? (
+            <HabitCardActionsMenu
+              habitName={habit.name}
+              onEdit={onEdit ? () => onEdit(habit) : undefined}
+              onDelete={onDelete ? () => onDelete(habit) : undefined}
+            />
+          ) : null}
+          {handleProps ? (
+            <button
+              type="button"
+              className="habit-card-v2-icon-btn drag-handle"
+              aria-label={`Drag to reorder ${habit.name}`}
+              tabIndex={interactive ? 0 : -1}
+              {...handleProps}
+            >
+              <span className="habit-card-drag-grip" aria-hidden />
+            </button>
+          ) : null}
+        </div>
         <div className="habit-card-icon-wrap">
           <HabitIcon icon={habit.icon} color={habit.color} size="md" />
         </div>
@@ -185,15 +208,13 @@ function CardContent({
             <span>{stats.currentStreak} day streak</span>
           </p>
           <div className="habit-card-v2-head-actions">
-            <Link
-              href={`/habits/${habit.id}`}
-              className="habit-card-v2-icon-btn"
-              aria-label={`Open ${habit.name}`}
-              tabIndex={interactive ? 0 : -1}
-              onClick={interactive ? undefined : (e) => e.preventDefault()}
-            >
-              <MoreVertical className="size-4" aria-hidden />
-            </Link>
+            {showActions ? (
+              <HabitCardActionsMenu
+                habitName={habit.name}
+                onEdit={onEdit ? () => onEdit(habit) : undefined}
+                onDelete={onDelete ? () => onDelete(habit) : undefined}
+              />
+            ) : null}
             {handleProps ? (
               <button
                 type="button"
@@ -262,16 +283,52 @@ function CardContent({
   );
 }
 
+function habitCardSurfaceClass(habit: HabitWithLogs, layout: "grid" | "list") {
+  if (layout === "list") return null;
+  const coverStyle = resolveHabitCardCoverStyle(habit);
+  if (coverStyle === "image") return "habit-card-v2--cover-image";
+  return null;
+}
+
+function HabitCardBackdrop({
+  habit,
+  layout,
+}: {
+  habit: HabitWithLogs;
+  layout: "grid" | "list";
+}) {
+  if (layout === "list") {
+    return <HabitCardCornerArt src={resolveHabitCardArtSrc(habit)} />;
+  }
+
+  const coverStyle = resolveHabitCardCoverStyle(habit);
+
+  if (coverStyle === "corner") {
+    return <HabitCardCornerArt src={resolveHabitCardArtSrc(habit)} />;
+  }
+
+  return (
+    <HabitCardCover
+      style="image"
+      coverImageKey={resolveHabitCoverImageKey(habit)}
+    />
+  );
+}
+
 function PlainHabitCard({
   habit,
   index = 0,
   overlay = false,
   layout = "grid",
+  onEdit,
+  onDelete,
 }: {
   habit: HabitWithLogs;
   index?: number;
   overlay?: boolean;
   layout?: "grid" | "list";
+  onEdit?: (habit: HabitWithLogs) => void;
+  onDelete?: (habit: HabitWithLogs) => void;
 }) {
   const { logs, onToggleToday } = useToggleToday(habit);
 
@@ -280,18 +337,23 @@ function PlainHabitCard({
       <article
         className={cn(
           "habit-card habit-card-glass habit-card-v2",
+          habitCardSurfaceClass(habit, layout),
           layout === "list" && "habit-card-row",
         )}
         style={{ ["--habit" as string]: habit.color }}
       >
-        <HabitCardCornerArt src={resolveHabitCardArtSrc(habit)} />
+        <HabitCardBackdrop habit={habit} layout={layout} />
+        <div className={layout === "grid" ? "habit-card-v2-body" : "contents"}>
         <CardContent
           habit={habit}
           logs={overlay ? habit.logs : logs}
           onToggleToday={overlay ? undefined : onToggleToday}
           interactive={!overlay}
           layout={layout}
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
+        </div>
       </article>
     </AnimatedHabitCard>
   );
@@ -301,10 +363,14 @@ function SortableHabitCard({
   habit,
   index = 0,
   layout = "grid",
+  onEdit,
+  onDelete,
 }: {
   habit: HabitWithLogs;
   index?: number;
   layout?: "grid" | "list";
+  onEdit?: (habit: HabitWithLogs) => void;
+  onDelete?: (habit: HabitWithLogs) => void;
 }) {
   const { logs, onToggleToday } = useToggleToday(habit);
   const {
@@ -322,6 +388,7 @@ function SortableHabitCard({
         ref={setNodeRef}
         className={cn(
           "habit-card habit-card-glass habit-card-v2",
+          habitCardSurfaceClass(habit, layout),
           layout === "list" && "habit-card-row",
           isDragging && "dragging",
         )}
@@ -332,7 +399,8 @@ function SortableHabitCard({
           opacity: isDragging ? 0 : undefined,
         }}
       >
-        <HabitCardCornerArt src={resolveHabitCardArtSrc(habit)} />
+        <HabitCardBackdrop habit={habit} layout={layout} />
+        <div className={layout === "grid" ? "habit-card-v2-body" : "contents"}>
         <CardContent
           habit={habit}
           logs={logs}
@@ -340,7 +408,10 @@ function SortableHabitCard({
           interactive
           layout={layout}
           handleProps={{ ...attributes, ...listeners }}
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
+        </div>
       </article>
     </AnimatedHabitCard>
   );
@@ -352,12 +423,29 @@ export function HabitCard({
   overlay = false,
   sortable = true,
   layout = "grid",
+  onEdit,
+  onDelete,
 }: HabitCardProps) {
   if (overlay || !sortable) {
     return (
-      <PlainHabitCard habit={habit} index={index} overlay={overlay} layout={layout} />
+      <PlainHabitCard
+        habit={habit}
+        index={index}
+        overlay={overlay}
+        layout={layout}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
     );
   }
 
-  return <SortableHabitCard habit={habit} index={index} layout={layout} />;
+  return (
+    <SortableHabitCard
+      habit={habit}
+      index={index}
+      layout={layout}
+      onEdit={onEdit}
+      onDelete={onDelete}
+    />
+  );
 }

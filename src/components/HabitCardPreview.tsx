@@ -18,67 +18,69 @@ function behaviorLabel(behavior: HabitCardPreviewDraft["behavior"]): string {
 
 export function HabitCardPreview({ draft }: HabitCardPreviewProps) {
   const title = draft.name.trim() || "Your habit name";
-  const isCover = draft.coverStyle !== "corner";
   const schedule = draft.scheduleLabel || "Every day";
+  const coverStyle = draft.coverStyle;
+  const showCorner = coverStyle === "corner";
+  const showImage = coverStyle === "image";
 
   return (
     <article
       className={cn(
-        "habit-card-preview",
-        isCover && `habit-card-preview--${draft.coverStyle}`,
+        "habit-card-preview habit-card habit-card-glass habit-card-v2",
+        showImage && "habit-card-v2--cover-image",
       )}
       style={{ ["--habit" as string]: draft.color }}
       aria-label="Habit card preview"
     >
-      <HabitCardCover
-        style={draft.coverStyle}
-        artKey={draft.cardArtKey}
-        color={draft.color}
-        icon={draft.icon}
-      />
-      {!isCover ? (
+      {showImage ? (
+        <HabitCardCover style="image" coverImageKey={draft.coverImageKey} />
+      ) : null}
+      {showCorner ? (
         <HabitCardCornerArt src={habitCardArtSrc(draft.cardArtKey)} />
       ) : null}
 
-      {isCover ? (
-        <div className="habit-card-preview-overlay-copy">
-          <span className={`kind-chip habit-card-kind ${draft.behavior}`}>
-            {behaviorLabel(draft.behavior)}
-          </span>
-          <h3>{title}</h3>
-          <p>{schedule}</p>
-        </div>
-      ) : (
-        <>
-          <div className="habit-card-preview-head">
-            <HabitIcon icon={draft.icon} color={draft.color} size="lg" />
+      <div className="habit-card-v2-body">
+        <div className="habit-card-v2-head">
+          <HabitIcon icon={draft.icon} color={draft.color} size="lg" className="habit-card-v2-icon" />
+          <div className="habit-card-v2-head-meta">
             <p className="habit-card-streak">
               <Flame className="size-3.5" aria-hidden />
               <span>0 day streak</span>
             </p>
           </div>
-          <span className={`kind-chip habit-card-kind ${draft.behavior}`}>
-            {behaviorLabel(draft.behavior)}
-          </span>
-          <div className="habit-card-preview-title">
-            <h3>{title}</h3>
-            <p className="habit-meta">{schedule}</p>
-          </div>
-          <div className="habit-week-track habit-card-preview-week" aria-hidden>
-            {["M", "T", "W", "T", "F", "S", "S"].map((label, i) => (
-              <span key={`${label}-${i}`} className="habit-week-day">
-                <span className="habit-week-day-label">{label}</span>
-                <span className="habit-week-day-dot">
-                  {i === 3 ? <Check className="size-2.5" strokeWidth={3} /> : null}
-                </span>
+        </div>
+
+        <span className={`kind-chip habit-card-kind ${draft.behavior}`}>
+          {behaviorLabel(draft.behavior)}
+        </span>
+
+        <div className="habit-card-main habit-card-v2-title-link">
+          <h2>{title}</h2>
+          <p className="habit-meta">{schedule}</p>
+        </div>
+
+        <div className="habit-week-track" aria-hidden>
+          {["M", "T", "W", "T", "F", "S", "S"].map((label, i) => (
+            <span key={`${label}-${i}`} className={cn("habit-week-day", i === 3 && "on")}>
+              <span className="habit-week-day-label">{label}</span>
+              <span className="habit-week-day-dot">
+                {i === 3 ? <Check className="size-2.5" strokeWidth={3} aria-hidden /> : null}
               </span>
-            ))}
+            </span>
+          ))}
+        </div>
+
+        <div className="habit-week-progress">
+          <span className="habit-week-progress-label">1/7 this week</span>
+          <div className="habit-week-bar" role="presentation">
+            <span style={{ width: "14%" }} />
           </div>
-          <button type="button" className="check-btn habit-card-cta" disabled>
-            ✓ Mark as done
-          </button>
-        </>
-      )}
+        </div>
+
+        <button type="button" className="check-btn habit-card-cta" disabled>
+          ✓ Mark as done
+        </button>
+      </div>
     </article>
   );
 }

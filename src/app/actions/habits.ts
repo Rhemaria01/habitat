@@ -12,7 +12,9 @@ import {
 } from "@/lib/content/habit-card-art";
 import {
   DEFAULT_HABIT_CARD_COVER_STYLE,
+  DEFAULT_HABIT_COVER_IMAGE_KEY,
   isHabitCardCoverStyle,
+  isHabitCoverImageKey,
 } from "@/lib/content/habit-card-cover";
 import type { ActionResult } from "@/lib/api/types";
 import type {
@@ -42,8 +44,15 @@ function cardArtKeyFromInput(input: HabitInput): string {
 
 function cardCoverStyleFromInput(input: HabitInput): string {
   const style = input.card_cover_style?.trim();
+  if (style === "object") return DEFAULT_HABIT_CARD_COVER_STYLE;
   if (style && isHabitCardCoverStyle(style)) return style;
   return DEFAULT_HABIT_CARD_COVER_STYLE;
+}
+
+function cardCoverImageKeyFromInput(input: HabitInput): string {
+  const key = input.card_cover_image_key?.trim();
+  if (key && isHabitCoverImageKey(key)) return key;
+  return DEFAULT_HABIT_COVER_IMAGE_KEY;
 }
 
 function habitData(input: HabitInput) {
@@ -60,6 +69,7 @@ function habitData(input: HabitInput) {
     icon: input.icon?.trim() || null,
     card_art_key: cardArtKeyFromInput(input),
     card_cover_style: cardCoverStyleFromInput(input),
+    card_cover_image_key: cardCoverImageKeyFromInput(input),
     status: input.status ?? "active",
     frequency: input.frequency ?? "daily",
     schedule_kind: scheduleKind,

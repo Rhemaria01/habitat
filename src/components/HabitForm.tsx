@@ -42,16 +42,20 @@ import {
 import { IconPicker } from "@/components/IconPicker";
 import { HabitCardArtPicker } from "@/components/HabitCardArtPicker";
 import { HabitCardCoverStylePicker } from "@/components/HabitCardCoverStylePicker";
+import { HabitCoverImagePicker } from "@/components/HabitCoverImagePicker";
 import {
   DEFAULT_HABIT_CARD_ART_KEY,
   habitCardArtKeyForForm,
   type HabitCardArtKey,
 } from "@/lib/content/habit-card-art";
 import {
-  DEFAULT_HABIT_CARD_COVER_STYLE,
+  DEFAULT_CREATE_HABIT_COVER_STYLE,
+  DEFAULT_HABIT_COVER_IMAGE_KEY,
   habitCardCoverKeyForForm,
+  habitCoverImageKeyForForm,
   type HabitCardCoverStyle,
   type HabitCardPreviewDraft,
+  type HabitCoverImageKey,
 } from "@/lib/content/habit-card-cover";
 import { normalizeHabitSymbol } from "@/lib/habit-symbol";
 
@@ -101,7 +105,10 @@ export function HabitForm({
     habitCardArtKeyForForm(habit),
   );
   const [coverStyle, setCoverStyle] = useState<HabitCardCoverStyle>(() =>
-    habitCardCoverKeyForForm(habit),
+    habit ? habitCardCoverKeyForForm(habit) : DEFAULT_CREATE_HABIT_COVER_STYLE,
+  );
+  const [coverImageKey, setCoverImageKey] = useState<HabitCoverImageKey>(() =>
+    habit ? habitCoverImageKeyForForm(habit) : DEFAULT_HABIT_COVER_IMAGE_KEY,
   );
   const [step, setStep] = useState<Step>("details");
   const [markedDays, setMarkedDays] = useState<Set<string>>(new Set());
@@ -118,6 +125,7 @@ export function HabitForm({
       icon,
       cardArtKey,
       coverStyle,
+      coverImageKey,
       scheduleLabel: schedulePreviewLabel(schedule),
     });
   }, [
@@ -127,6 +135,7 @@ export function HabitForm({
     icon,
     cardArtKey,
     coverStyle,
+    coverImageKey,
     schedule,
     onDraftChange,
   ]);
@@ -139,7 +148,12 @@ export function HabitForm({
     setColor(COLORS[0]);
     setIcon(null);
     setCardArtKey(DEFAULT_HABIT_CARD_ART_KEY);
-    setCoverStyle(DEFAULT_HABIT_CARD_COVER_STYLE);
+    setCoverStyle(
+      habit ? habitCardCoverKeyForForm(habit) : DEFAULT_CREATE_HABIT_COVER_STYLE,
+    );
+    setCoverImageKey(
+      habit ? habitCoverImageKeyForForm(habit) : DEFAULT_HABIT_COVER_IMAGE_KEY,
+    );
     setStep("details");
     setMarkedDays(new Set());
   }
@@ -160,6 +174,7 @@ export function HabitForm({
       icon: normalizeHabitSymbol(icon),
       card_art_key: cardArtKey,
       card_cover_style: coverStyle,
+      card_cover_image_key: coverImageKey,
       ...habitScheduleInput(schedule),
     };
 
@@ -550,13 +565,22 @@ export function HabitForm({
         <HabitCardCoverStylePicker value={coverStyle} onChange={setCoverStyle} />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label>Illustration</Label>
-        <p className="text-xs text-muted-foreground">
-          Used for corner art, cover photos, or the hero object.
-        </p>
-        <HabitCardArtPicker value={cardArtKey} onChange={setCardArtKey} />
-      </div>
+      {coverStyle === "image" ? (
+        <div className="flex flex-col gap-2">
+          <Label>Cover photo</Label>
+          <p className="text-xs text-muted-foreground">
+            Background only — title, streak, and buttons stay in the same layout.
+          </p>
+          <HabitCoverImagePicker value={coverImageKey} onChange={setCoverImageKey} />
+        </div>
+      ) : null}
+
+      {coverStyle !== "image" ? (
+        <div className="flex flex-col gap-2">
+          <Label>Corner illustration</Label>
+          <HabitCardArtPicker value={cardArtKey} onChange={setCardArtKey} />
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-2">
         <Label>Color</Label>
@@ -589,6 +613,8 @@ export function HabitForm({
               </>
             ) : needsHistoryOnboarding ? (
               "Continue"
+            ) : habit ? (
+              "Save changes"
             ) : (
               "Add habit"
             )}
