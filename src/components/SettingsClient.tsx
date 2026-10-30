@@ -1,16 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Bell,
   Check,
   Info,
   LogOut,
-  Monitor,
-  Moon,
   Palette,
   Settings2,
-  Sun,
   Database,
 } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
@@ -50,21 +47,16 @@ import {
   useUpdateProfileMutation,
 } from "@/hooks/api/use-mutations";
 import { SettingsCard } from "@/components/settings/SettingsCard";
+import { ThemeModeSwitcher } from "@/components/ThemeModeSwitcher";
 import {
   ACCENT_SWATCHES,
   REMINDER_TIME_OPTIONS,
   preferencesFromProfile,
-  type AccentId,
   type SettingsPreferences,
-  type ThemeMode,
 } from "@/lib/settings-preferences";
-import {
-  applyAccent,
-  applyThemeMode,
-  formatTimezoneLabel,
-  listTimezones,
-} from "@/lib/theme-prefs";
 import { cn } from "@/lib/utils";
+import { useAppearance } from "@/components/AppearanceProvider";
+import { formatTimezoneLabel, listTimezones } from "@/lib/theme-prefs";
 
 const APP_VERSION = "0.1.0";
 const IDENTITY_MAX = 200;
@@ -99,9 +91,7 @@ export function SettingsClient({ profile: initial }: SettingsClientProps) {
   >({});
   const prefs: SettingsPreferences = { ...savedPrefs, ...prefOverrides };
 
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
-    preferencesFromProfile(initial.onboarding ?? {}).theme_mode,
-  );
+  const { accent, setAccent } = useAppearance();
 
   const fileRef = useRef<HTMLInputElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,14 +103,6 @@ export function SettingsClient({ profile: initial }: SettingsClientProps) {
     exportMutation.isPending ||
     importMutation.isPending ||
     clearMutation.isPending;
-
-  useEffect(() => {
-    applyAccent(savedPrefs.accent);
-  }, [savedPrefs.accent]);
-
-  useEffect(() => {
-    applyThemeMode(themeMode);
-  }, [themeMode]);
 
   const scheduleProfileSave = useCallback(
     (patch: {
@@ -151,15 +133,8 @@ export function SettingsClient({ profile: initial }: SettingsClientProps) {
     schedulePrefsSave(patch);
   }
 
-  function onThemePick(mode: ThemeMode) {
-    setThemeMode(mode);
-    applyThemeMode(mode);
-    patchPrefs({ theme_mode: mode });
-  }
-
-  function onAccentPick(accent: AccentId) {
-    applyAccent(accent);
-    patchPrefs({ accent });
+  function onAccentPick(accentId: Parameters<typeof setAccent>[0]) {
+    setAccent(accentId);
   }
 
   function exportData() {
@@ -277,31 +252,7 @@ export function SettingsClient({ profile: initial }: SettingsClientProps) {
         <SettingsCard icon={Palette} title="Appearance">
           <div className="settings-field">
             <span className="settings-field-label">Theme</span>
-            <div className="settings-theme-grid">
-              {(
-                [
-                  { id: "light" as const, label: "Light", icon: Sun },
-                  { id: "dark" as const, label: "Dark", icon: Moon },
-                  { id: "system" as const, label: "System", icon: Monitor },
-                ] as const
-              ).map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={cn(
-                    "settings-theme-tile",
-                    themeMode === id && "active",
-                  )}
-                  onClick={() => onThemePick(id)}
-                >
-                  <Icon className="size-5" aria-hidden />
-                  <span>{label}</span>
-                  {themeMode === id ? (
-                    <Check className="size-3.5 text-primary" aria-hidden />
-                  ) : null}
-                </button>
-              ))}
-            </div>
+            <ThemeModeSwitcher variant="settings" />
           </div>
 
           <div className="settings-field">
@@ -313,14 +264,14 @@ export function SettingsClient({ profile: initial }: SettingsClientProps) {
                   type="button"
                   className={cn(
                     "settings-accent-swatch",
-                    prefs.accent === swatch.id && "active",
+                    accent === swatch.id && "active",
                   )}
                   style={{ backgroundColor: swatch.color }}
                   aria-label={swatch.label}
-                  aria-pressed={prefs.accent === swatch.id}
+                  aria-pressed={accent === swatch.id}
                   onClick={() => onAccentPick(swatch.id)}
                 >
-                  {prefs.accent === swatch.id ? (
+                  {accent === swatch.id ? (
                     <Check className="size-3.5" aria-hidden />
                   ) : null}
                 </button>

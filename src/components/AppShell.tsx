@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Leaf } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
-import { SideNav, TabBar, ThemeToggle } from "@/components/Nav";
+import { SideNav, TabBar, ThemeModeSwitcher } from "@/components/Nav";
 import { SideFooter } from "@/components/SideFooter";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +34,7 @@ export function AppShell({
             <Leaf className="side-brand-icon" aria-hidden />
             <span>Habitat</span>
           </Link>
-          <ThemeToggle />
+          <ThemeModeSwitcher variant="sidebar" />
         </div>
         <p className="side-tagline">Build a better you</p>
         <SideNav />
@@ -63,7 +63,7 @@ export function AppShell({
             <span>Habitat</span>
           </Link>
           <div className="mobile-actions">
-            <ThemeToggle />
+            <ThemeModeSwitcher variant="toolbar" />
             <form action={logoutAction}>
               <button type="submit" className="ghost-btn">
                 Lock

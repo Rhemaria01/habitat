@@ -1,5 +1,7 @@
 /** Time-of-day bucket for scenic backgrounds and copy. */
 
+import type { Theme } from "@/lib/theme";
+
 export type DayPeriod = "morning" | "afternoon" | "evening" | "night";
 
 /** Single scenic photo for the Today dashboard (main column). */
@@ -14,8 +16,16 @@ const SCENIC_BY_PERIOD: Record<DayPeriod, string> = {
   night: "/images/scenery-night.jpg",
 };
 
+const SCENIC_LIGHT_BY_PERIOD: Record<DayPeriod, string> = {
+  morning: "/images/scenery-morning-light.jpg",
+  afternoon: "/images/scenery-afternoon-light.jpg",
+  evening: "/images/scenery-evening-light.jpg",
+  night: "/images/scenery-night-light.jpg",
+};
+
 /** Solid fill matched to the lower edge of the photo (CSS `--scenic-fade`). */
 export const SCENIC_FADE_COLOR = "#202321";
+export const SCENIC_FADE_COLOR_LIGHT = "#e8e9df";
 
 /** Local hour → morning / afternoon / evening / night. */
 export function getDayPeriod(at: Date = new Date()): DayPeriod {
@@ -26,12 +36,18 @@ export function getDayPeriod(at: Date = new Date()): DayPeriod {
   return "night";
 }
 
-export function scenicBackgroundForPeriod(period?: DayPeriod): string {
-  return SCENIC_BY_PERIOD[period ?? getDayPeriod()];
+export function scenicBackgroundForPeriod(
+  period?: DayPeriod,
+  theme: Theme = "dark",
+): string {
+  const bucket = period ?? getDayPeriod();
+  return theme === "light"
+    ? SCENIC_LIGHT_BY_PERIOD[bucket]
+    : SCENIC_BY_PERIOD[bucket];
 }
 
-export function scenicBackgroundNow(): string {
-  return scenicBackgroundForPeriod(getDayPeriod());
+export function scenicBackgroundNow(theme: Theme = "dark"): string {
+  return scenicBackgroundForPeriod(getDayPeriod(), theme);
 }
 
 export function timeGreeting(at: Date = new Date()): string {

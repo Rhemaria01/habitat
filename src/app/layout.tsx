@@ -3,10 +3,12 @@ import Script from "next/script";
 import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ACCENT_COOKIE, THEME_COOKIE, normalizeTheme, resolveThemeForHtml } from "@/lib/theme";
+import { isAccentId } from "@/lib/appearance-tokens";
 import type { AccentId } from "@/lib/settings-preferences";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { getSiteUrl } from "@/lib/brand-mark";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -20,10 +22,13 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+const siteDescription =
+  "Simple habit tracking — log today, see your streaks and stats.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: "Habitat",
-  description:
-    "Simple habit tracking — log today, see your streaks and stats.",
+  description: siteDescription,
   applicationName: "Habitat",
   appleWebApp: {
     capable: true,
@@ -33,12 +38,16 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  icons: {
-    icon: [
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
-    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  openGraph: {
+    type: "website",
+    siteName: "Habitat",
+    title: "Habitat",
+    description: siteDescription,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Habitat",
+    description: siteDescription,
   },
   manifest: "/manifest.webmanifest",
 };
@@ -56,15 +65,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const themeMode = normalizeTheme(jar.get(THEME_COOKIE)?.value);
   const theme = resolveThemeForHtml(themeMode);
   const accentRaw = jar.get(ACCENT_COOKIE)?.value;
-  const accent =
-    accentRaw === "green" ||
-    accentRaw === "purple" ||
-    accentRaw === "blue" ||
-    accentRaw === "orange" ||
-    accentRaw === "pink" ||
-    accentRaw === "teal"
-      ? accentRaw
-      : ("green" satisfies AccentId);
+  const accent: AccentId = isAccentId(accentRaw)
+    ? accentRaw
+    : "green";
 
   return (
     <html

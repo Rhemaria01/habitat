@@ -1,3 +1,5 @@
+import { accentSwatchColor } from "@/lib/appearance-tokens";
+
 export type AccentId = "green" | "purple" | "blue" | "orange" | "pink" | "teal";
 
 export type ThemeMode = "light" | "dark" | "system";
@@ -11,12 +13,12 @@ export type SettingsPreferences = {
 };
 
 export const ACCENT_SWATCHES: { id: AccentId; color: string; label: string }[] = [
-  { id: "green", color: "#8FA992", label: "Green" },
-  { id: "purple", color: "#A898C4", label: "Purple" },
-  { id: "blue", color: "#9BA8C4", label: "Blue" },
-  { id: "orange", color: "#C4A574", label: "Orange" },
-  { id: "pink", color: "#C4908F", label: "Pink" },
-  { id: "teal", color: "#8EB5B8", label: "Teal" },
+  { id: "green", color: accentSwatchColor("green"), label: "Green" },
+  { id: "purple", color: accentSwatchColor("purple"), label: "Purple" },
+  { id: "blue", color: accentSwatchColor("blue"), label: "Blue" },
+  { id: "orange", color: accentSwatchColor("orange"), label: "Orange" },
+  { id: "pink", color: accentSwatchColor("pink"), label: "Pink" },
+  { id: "teal", color: accentSwatchColor("teal"), label: "Teal" },
 ];
 
 export const REMINDER_TIME_OPTIONS = [

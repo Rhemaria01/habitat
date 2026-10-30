@@ -74,4 +74,4 @@ export function TabBar() {
   );
 }
 
-export { ThemeToggle } from "@/components/NavTheme";
+export { ThemeModeSwitcher } from "@/components/ThemeModeSwitcher";

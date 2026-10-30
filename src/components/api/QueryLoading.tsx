@@ -144,21 +144,14 @@ export function StatsPageSkeleton() {
 
 export function SettingsFormSkeleton() {
   return (
-    <div className="space-y-6 max-w-lg" aria-busy aria-label="Loading settings">
-      <section className="panel glass-panel space-y-3">
-        <Skeleton className="h-6 w-28" />
-        {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className="space-y-2">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-10 w-full rounded-md" />
-          </div>
-        ))}
-        <Skeleton className="h-10 w-24 rounded-md" />
-      </section>
-      <section className="panel glass-panel space-y-3">
-        <Skeleton className="h-6 w-16" />
-        <Skeleton className="h-10 w-32 rounded-md" />
-      </section>
+    <div className="settings-grid" aria-busy aria-label="Loading settings">
+      {Array.from({ length: 4 }, (_, i) => (
+        <section key={i} className="settings-card glass-panel space-y-3">
+          <Skeleton className="h-6 w-28" />
+          <Skeleton className="h-10 w-full rounded-md" />
+          <Skeleton className="h-10 w-full rounded-md" />
+        </section>
+      ))}
     </div>
   );
 }

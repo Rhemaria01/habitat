@@ -15,7 +15,10 @@ export async function proxy(request: NextRequest) {
     pathname === "/sw.js" ||
     pathname.startsWith("/workbox-") ||
     pathname === "/offline" ||
-    pathname === "/favicon.ico";
+    pathname === "/icon" ||
+    pathname === "/apple-icon" ||
+    pathname === "/opengraph-image" ||
+    pathname === "/twitter-image";
 
   if (isPublicAsset || isKeepAliveCron) {
     return NextResponse.next();

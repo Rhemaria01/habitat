@@ -37,14 +37,7 @@ export type HabitActivityRow = {
   outcome: CalendarHabitOutcome;
 };
 
-const HABIT_TAGLINES: Record<string, string> = {
-  "gym-session": "Strength today. A healthier tomorrow.",
-};
-
 export function habitDetailTagline(habit: HabitWithLogs): string {
-  if (habit.source_key && HABIT_TAGLINES[habit.source_key]) {
-    return HABIT_TAGLINES[habit.source_key];
-  }
   if (habit.identity_proof) {
     const t = habit.identity_proof.trim();
     if (t.length <= 72) return t;

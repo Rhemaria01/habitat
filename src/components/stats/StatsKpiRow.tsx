@@ -37,8 +37,8 @@ export function StatsKpiRow({ data }: StatsKpiRowProps) {
             <StatsCounter
               value={data.avgAdherence ?? data.weekAdherence ?? 0}
               suffix="%"
-              decimals={1}
-              className="text-xl font-bold"
+              decimals={0}
+              className="stats-kpi-ring-value"
             />
           </div>
         </div>

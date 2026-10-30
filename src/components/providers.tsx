@@ -5,6 +5,7 @@ import { MotionConfig } from "motion/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { HabitatPets } from "@/components/pets/HabitatPets";
+import { AppearanceProvider } from "@/components/AppearanceProvider";
 import { getQueryClient } from "@/lib/api/query-client";
 
 /**
@@ -16,13 +17,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <MotionConfig reducedMotion="user">
-          <HabitatPets />
-          {children}
-          <Toaster position="bottom-center" />
-        </MotionConfig>
-      </TooltipProvider>
+      <AppearanceProvider>
+        <TooltipProvider>
+          <MotionConfig reducedMotion="user">
+            <HabitatPets />
+            {children}
+            <Toaster position="bottom-center" />
+          </MotionConfig>
+        </TooltipProvider>
+      </AppearanceProvider>
     </QueryClientProvider>
   );
 }

@@ -48,17 +48,6 @@ const HABIT_CARD_ART_SRC: Record<HabitCardArtKey, string> = Object.fromEntries(
   HABIT_CARD_ART_OPTIONS.map((o) => [o.key, o.src]),
 ) as Record<HabitCardArtKey, string>;
 
-/** Personal seed habits → default art when `card_art_key` is unset. */
-export const SEED_CARD_ART_BY_SOURCE_KEY: Record<string, HabitCardArtKey> = {
-  "quit-smoking": "leaf",
-  "gym-session": "dumbbell",
-  "daily-steps": "footprints",
-  "evening-skincare": "bottle",
-  "daily-writing": "pen",
-  "daily-reading": "book",
-  "daily-chanting": "candle",
-};
-
 export function isHabitCardArtKey(value: string): value is HabitCardArtKey {
   return (HABIT_CARD_ART_KEYS as readonly string[]).includes(value);
 }
@@ -69,26 +58,18 @@ export function habitCardArtSrc(key: HabitCardArtKey): string {
 
 export function resolveHabitCardArtSrc(habit: {
   card_art_key: string | null;
-  source_key: string | null;
 }): string {
   if (habit.card_art_key && isHabitCardArtKey(habit.card_art_key)) {
     return habitCardArtSrc(habit.card_art_key);
   }
-  const seeded = habit.source_key
-    ? SEED_CARD_ART_BY_SOURCE_KEY[habit.source_key]
-    : undefined;
-  if (seeded) return habitCardArtSrc(seeded);
   return habitCardArtSrc(DEFAULT_HABIT_CARD_ART_KEY);
 }
 
 export function habitCardArtKeyForForm(
-  habit: { card_art_key: string | null; source_key: string | null } | undefined,
+  habit: { card_art_key: string | null } | undefined,
 ): HabitCardArtKey {
   if (habit?.card_art_key && isHabitCardArtKey(habit.card_art_key)) {
     return habit.card_art_key;
-  }
-  if (habit?.source_key && SEED_CARD_ART_BY_SOURCE_KEY[habit.source_key]) {
-    return SEED_CARD_ART_BY_SOURCE_KEY[habit.source_key];
   }
   return DEFAULT_HABIT_CARD_ART_KEY;
 }

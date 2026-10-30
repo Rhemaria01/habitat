@@ -1,17 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Check,
-  ChevronRight as ChevronRightSmall,
   Plus,
-  X,
 } from "lucide-react";
-import { LayoutGroup, motion, useReducedMotion } from "motion/react";
+import { LayoutGroup, motion } from "motion/react";
 import {
   type CalendarDayDetail,
   type CalendarMonth,
@@ -27,19 +24,30 @@ import {
   calendarMonthViewPending,
 } from "@/components/api/QueryLoading";
 import { AddHabitDialog } from "@/components/AddHabitDialog";
-import { CalendarDayBackfill } from "@/components/CalendarDayBackfill";
+import { CalendarSideHabitCard } from "@/components/CalendarSideHabitCard";
 import { CalendarScenicBackdrop } from "@/components/CalendarScenicBackdrop";
 import { CalendarDayDots, CalendarDayRing } from "@/components/CalendarDayRing";
-import { HabitIcon } from "@/components/HabitIcon";
 import {
   useCalendarDayQuery,
   useCalendarMonthQuery,
 } from "@/hooks/api/use-calendar";
+import { useHabitsQuery } from "@/hooks/api/use-habits";
+import { useDeleteHabitMutation } from "@/hooks/api/use-mutations";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   CalendarFlyProvider,
   useCalendarCellRef,
 } from "@/components/calendar/CalendarFlyProvider";
-import type { CalendarHabitOutcome } from "@/lib/calendar-day";
+import type { HabitWithLogs } from "@/lib/types";
 import { LOCALE, parseDateKey, todayKey, toDateKey } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -57,43 +65,6 @@ function monthInputValue(year: number, month: number) {
 const calSideLayoutTransition = {
   layout: { type: "spring" as const, stiffness: 420, damping: 34 },
 };
-
-function OutcomeBadge({ outcome }: { outcome: CalendarHabitOutcome }) {
-  const reduceMotion = useReducedMotion();
-
-  let badgeClass = "cal-outcome-badge none";
-  let content: ReactNode = null;
-
-  if (outcome === "before_start") {
-    badgeClass = "cal-outcome-badge none dash";
-    content = "—";
-  } else if (outcome === "not_scheduled" || outcome === "future") {
-    content = null;
-  } else if (outcome === "completed") {
-    badgeClass = "cal-outcome-badge completed";
-    content = <Check className="size-3.5" strokeWidth={3} />;
-  } else if (outcome === "missed") {
-    badgeClass = "cal-outcome-badge missed";
-    content = <X className="size-3.5" strokeWidth={3} />;
-  } else {
-    badgeClass = "cal-outcome-badge partial";
-  }
-
-  return (
-    <span className="cal-outcome-badge-slot">
-      <motion.span
-        key={outcome}
-        className={badgeClass}
-        aria-hidden
-        initial={reduceMotion ? false : { scale: 0.86, opacity: 0.45 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 520, damping: 32 }}
-      >
-        {content}
-      </motion.span>
-    </span>
-  );
-}
 
 function CalMonthDayButton({
   cell,
@@ -210,6 +181,26 @@ export function CalendarClient({ initial, initialDay }: CalendarClientProps) {
     calendarMonthViewPending(month, year, monthIndex, monthFetching);
   const showDaySkeleton =
     dayLoading || !dayDetail || dayDetail.dateKey !== selectedKey;
+
+  const { data: habitsList } = useHabitsQuery();
+  const [editHabit, setEditHabit] = useState<HabitWithLogs | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<HabitWithLogs | null>(null);
+  const deleteMutation = useDeleteHabitMutation(deleteTarget?.id ?? "");
+
+  function habitForActions(habitId: string): HabitWithLogs | undefined {
+    return habitsList?.find((h) => h.id === habitId);
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    const name = deleteTarget.name;
+    deleteMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(`“${name}” deleted.`);
+        setDeleteTarget(null);
+      },
+    });
+  }
 
   return (
     <CalendarFlyProvider>
@@ -488,26 +479,17 @@ export function CalendarClient({ initial, initialDay }: CalendarClientProps) {
                         transition={calSideLayoutTransition}
                         className="cal-side-habit-item"
                       >
-                        <Link href={`/habits/${h.id}`} className="cal-side-habit-row">
-                          <HabitIcon icon={h.icon} color={h.color} size="sm" />
-                          <div className="cal-side-habit-copy">
-                            <span className="cal-side-habit-name">{h.name}</span>
-                            <span className="cal-side-habit-time">{h.timeLabel}</span>
-                          </div>
-                          <OutcomeBadge outcome={h.outcome} />
-                          <ChevronRightSmall
-                            className="size-4 text-muted-foreground"
-                            aria-hidden
-                          />
-                        </Link>
-                        <CalendarDayBackfill
-                          habitId={h.id}
-                          behavior={h.behavior_type}
-                          startDate={h.start_date}
+                        <CalendarSideHabitCard
+                          habit={h}
                           dateKey={selectedKey}
-                          habitColor={h.color}
-                          log={h.log}
-                          scheduled={h.scheduled}
+                          onEdit={() => {
+                            const full = habitForActions(h.id);
+                            if (full) setEditHabit(full);
+                          }}
+                          onDelete={() => {
+                            const full = habitForActions(h.id);
+                            if (full) setDeleteTarget(full);
+                          }}
                         />
                       </motion.li>
                     ))
@@ -521,7 +503,43 @@ export function CalendarClient({ initial, initialDay }: CalendarClientProps) {
         </aside>
       </div>
 
-      <AddHabitDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddHabitDialog
+        open={addOpen || editHabit !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAddOpen(false);
+            setEditHabit(null);
+          }
+        }}
+        habit={editHabit}
+      />
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete “{deleteTarget?.name ?? "this habit"}”?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the habit and all check-in history. It can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </CalendarFlyProvider>
   );

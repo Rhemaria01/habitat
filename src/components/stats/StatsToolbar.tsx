@@ -32,7 +32,7 @@ export function StatsToolbar({
   }
 
   return (
-    <div className="stats-v2-toolbar animate-fade-up">
+    <div className="stats-v2-toolbar glass-panel stats-v2-toolbar-panel animate-fade-up">
       <div className="stats-range" role="group" aria-label="Time range">
         {(Object.keys(STATS_RANGE_DAYS) as StatsRangeKey[]).map((key) => (
           <button
