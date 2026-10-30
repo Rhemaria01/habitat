@@ -67,11 +67,12 @@ export function HaloTabsTrigger({
       {...props}
       className={cn(
         "relative z-1 inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-md px-3 py-2",
-        "font-medium text-muted-foreground text-sm tracking-tight antialiased",
+        "font-medium text-secondary-foreground text-sm tracking-tight antialiased",
         "outline-none transition-colors duration-200 ease-out",
         "focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         "disabled:pointer-events-none disabled:opacity-50",
-        "data-active:text-foreground",
+        "data-active:font-semibold data-active:text-foreground",
+        "group-data-[variant=pill]/halo-tabs-list:data-active:text-foreground",
         "group-data-[variant=pill]/halo-tabs-list:rounded-full group-data-[variant=pill]/halo-tabs-list:px-4 group-data-[variant=pill]/halo-tabs-list:py-2",
         "group-data-[variant=underline]/halo-tabs-list:data-active:bg-transparent",
         className

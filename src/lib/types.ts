@@ -31,6 +31,7 @@ export type Habit = {
   personal_reason: string | null;
   start_date: string;
   color: string;
+  icon: string | null;
   sort_order: number;
   archived_at: string | null;
   status: HabitStatus;
@@ -73,6 +74,7 @@ export type Habit = {
   planned_time: string | null;
   tracking_type: string;
   tracking_unit: string | null;
+  tracking_target: number | null;
   is_priority: boolean;
 };
 
@@ -100,6 +102,7 @@ export type HabitInput = {
   personal_reason?: string | null;
   start_date: string;
   color: string;
+  icon?: string | null;
   frequency?: HabitFrequency;
   schedule_kind?: ScheduleKind;
   schedule_weekdays?: number[];
@@ -136,6 +139,7 @@ export type HabitInput = {
   recovery_reminder?: boolean;
   tracking_type?: string;
   tracking_unit?: string | null;
+  tracking_target?: number | null;
   is_priority?: boolean;
 };
 

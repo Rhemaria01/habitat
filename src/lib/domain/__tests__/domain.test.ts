@@ -13,6 +13,7 @@ const baseHabit = (over: Partial<Habit> = {}): Habit => ({
   personal_reason: null,
   start_date: "2026-01-01",
   color: "#000",
+  icon: null,
   sort_order: 0,
   archived_at: null,
   status: "active",
@@ -55,6 +56,7 @@ const baseHabit = (over: Partial<Habit> = {}): Habit => ({
   planned_time: null,
   tracking_type: "binary",
   tracking_unit: null,
+  tracking_target: null,
   is_priority: false,
   ...over,
 });

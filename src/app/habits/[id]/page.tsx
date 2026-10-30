@@ -2,6 +2,7 @@ import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 import { getHabit } from "@/app/actions/habits";
+import { getCalendarMonthForHabit } from "@/app/actions/calendar";
 import { AppShell } from "@/components/AppShell";
 
 export const dynamic = "force-dynamic";
@@ -50,9 +51,16 @@ export default async function HabitPage({ params }: HabitPageProps) {
 
   if (!habit) notFound();
 
+  const now = new Date();
+  const initialCalendar = await getCalendarMonthForHabit(
+    habit.id,
+    now.getFullYear(),
+    now.getMonth(),
+  );
+
   return (
-    <AppShell>
-      <HabitDetailClient habit={habit} />
+    <AppShell wide fullWidth>
+      <HabitDetailClient habit={habit} initialCalendar={initialCalendar} />
     </AppShell>
   );
 }

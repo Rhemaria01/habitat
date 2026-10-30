@@ -28,7 +28,7 @@ export default async function HabitsPage() {
   }
 
   return (
-    <AppShell wide>
+    <AppShell wide fullWidth>
       <HabitsClient habits={habits} />
     </AppShell>
   );

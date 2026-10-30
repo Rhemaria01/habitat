@@ -47,6 +47,7 @@ model Habit {
   personal_reason            String?
   start_date                 DateTime            @db.Date
   color                      String              @default("#7C9A82")
+  icon                       String?
   sort_order                 Int                 @default(0)
   archived_at                DateTime?           @db.Timestamptz(6)
   status                     String              @default("active")
@@ -87,6 +88,7 @@ model Habit {
   schedule_end_date          DateTime?           @db.Date
   time_window                String?
   planned_time               String?
+  tracking_target            Int?
   tracking_type              String              @default("binary")
   tracking_unit              String?
   is_priority                Boolean             @default(false)

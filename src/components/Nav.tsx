@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
-  ListChecks,
+  CalendarDays,
+  RefreshCw,
   Settings,
-  SunMedium,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,9 +16,10 @@ const LINKS: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { href: "/", label: "Today", icon: SunMedium },
-  { href: "/habits", label: "Habits", icon: ListChecks },
+  { href: "/", label: "Today", icon: Sparkles },
+  { href: "/habits", label: "Habits", icon: RefreshCw },
   { href: "/stats", label: "Stats", icon: BarChart3 },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -50,7 +52,7 @@ export function SideNav() {
 export function TabBar() {
   const pathname = usePathname();
   const mobileLinks = LINKS.filter((l) =>
-    ["/", "/habits", "/stats", "/settings"].includes(l.href),
+    ["/", "/habits", "/stats", "/calendar", "/settings"].includes(l.href),
   );
   return (
     <nav className="tabbar" aria-label="Primary">

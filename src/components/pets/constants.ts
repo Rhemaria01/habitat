@@ -1,14 +1,6 @@
 import type { BotAvatarType } from "bot-avatars";
 
-export type PetId =
-  | "miso"
-  | "nova"
-  | "pip"
-  | "bloom"
-  | "brick"
-  | "ghosty"
-  | "orbit"
-  | "sage";
+export type PetId = "miso" | "nova" | "pip";
 
 export type HabitatPet = {
   id: PetId;
@@ -25,93 +17,32 @@ export const HABITAT_PETS: HabitatPet[] = [
     name: "Miso",
     type: "cat",
     seed: 0.11,
-    followOffset: { x: -42, y: 52 },
+    followOffset: { x: -52, y: 48 },
   },
   {
     id: "nova",
     name: "Nova",
     type: "star",
     seed: 0.47,
-    followOffset: { x: 8, y: 58 },
+    followOffset: { x: 4, y: 56 },
   },
   {
     id: "pip",
     name: "Pip",
     type: "clover",
     seed: 0.83,
-    followOffset: { x: 48, y: 50 },
+    followOffset: { x: 56, y: 44 },
   },
-  {
-    id: "bloom",
-    name: "Bloom",
-    type: "flower",
-    seed: 0.22,
-    followOffset: { x: -36, y: 48 },
-  },
-  {
-    id: "brick",
-    name: "Brick",
-    type: "square",
-    seed: 0.61,
-    followOffset: { x: 12, y: 54 },
-  },
-  {
-    id: "ghosty",
-    name: "Ghosty",
-    type: "ghost",
-    seed: 0.34,
-    followOffset: { x: -28, y: 56 },
-  },
-  {
-    id: "orbit",
-    name: "Orbit",
-    type: "circle",
-    seed: 0.72,
-    followOffset: { x: 40, y: 46 },
-  },
-  {
-    id: "sage",
-    name: "Sage",
-    type: "drop",
-    seed: 0.55,
-    followOffset: { x: -8, y: 60 },
-  },
-];
-
-/** Longest prefix wins; `/` matches only the home route. */
-export const PET_ROUTE_ASSIGNMENTS: { prefix: string; petId: PetId }[] = [
-  { prefix: "/habits", petId: "nova" },
-  { prefix: "/settings", petId: "orbit" },
-  { prefix: "/stats", petId: "sage" },
-  { prefix: "/", petId: "miso" },
 ];
 
 const PET_BY_ID = new Map(HABITAT_PETS.map((p) => [p.id, p]));
 
-export function petForPathname(pathname: string): HabitatPet | null {
-  if (
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/onboarding") ||
-    pathname.startsWith("/offline")
-  ) {
-    return null;
-  }
-
-  const sorted = [...PET_ROUTE_ASSIGNMENTS].sort(
-    (a, b) => b.prefix.length - a.prefix.length,
+export function petsEnabledForPath(pathname: string): boolean {
+  return (
+    !pathname.startsWith("/login") &&
+    !pathname.startsWith("/onboarding") &&
+    !pathname.startsWith("/offline")
   );
-
-  for (const { prefix, petId } of sorted) {
-    if (prefix === "/") {
-      if (pathname === "/") return PET_BY_ID.get(petId) ?? null;
-      continue;
-    }
-    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
-      return PET_BY_ID.get(petId) ?? null;
-    }
-  }
-
-  return null;
 }
 
 export function getPet(id: PetId): HabitatPet {
@@ -120,9 +51,4 @@ export function getPet(id: PetId): HabitatPet {
   return pet;
 }
 
-export const PET_SIZE = 58;
-/** Single-room nook dock (bottom-right) */
-export const DOCK_WIDTH = 128;
-export const DOCK_HEIGHT = 148;
-export const DOCK_HEADER = 36;
-export const DOCK_MARGIN = 14;
+export const PET_SIZE = 52;

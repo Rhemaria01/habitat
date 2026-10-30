@@ -1,11 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { createHabit, seedHistoryFromStart, updateHabit } from "@/app/actions/habits";
 import { PastDaysPicker } from "@/components/PastDaysPicker";
-import { formatLongDate, todayKey } from "@/lib/dates";
+import {
+  useCreateHabitMutation,
+  useSeedHistoryMutation,
+  useUpdateHabitMutation,
+} from "@/hooks/api/use-mutations";
+import { formatLongDate, LOCALE, parseDateKey, todayKey } from "@/lib/dates";
 import type {
   Habit,
   HabitBehaviorType,
@@ -26,21 +30,27 @@ import {
   ToggleGroupItem,
 } from "@/components/ui/toggle-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Lightbulb } from "lucide-react";
+import {
+  Ban,
+  CalendarDays,
+  Lightbulb,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
+import { IconPicker } from "@/components/IconPicker";
+import { normalizeHabitSymbol } from "@/lib/habit-symbol";
 
-const COLORS = [
-  "#4FD1A5",
-  "#5E6AD2",
-  "#F0B429",
-  "#A78BFA",
-  "#6FB3E8",
-  "#F4576B",
-];
+import { HABIT_PICKER_COLORS } from "@/lib/habitat-colors";
+
+const COLORS = [...HABIT_PICKER_COLORS];
 
 type HabitFormProps = {
   habit?: Habit;
   onDone?: () => void;
+  onCancel?: () => void;
   compact?: boolean;
+  formId?: string;
+  hideSubmit?: boolean;
 };
 
 type Step = "details" | "history-ask" | "history-pick";
@@ -48,10 +58,17 @@ type Step = "details" | "history-ask" | "history-pick";
 export function HabitForm({
   habit,
   onDone,
+  onCancel,
   compact,
+  formId,
+  hideSubmit,
 }: HabitFormProps) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const createMutation = useCreateHabitMutation();
+  const updateMutation = useUpdateHabitMutation(habit?.id ?? "");
+  const seedMutation = useSeedHistoryMutation();
+  const pending =
+    createMutation.isPending || updateMutation.isPending || seedMutation.isPending;
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(habit?.name ?? "");
   const [behavior, setBehavior] = useState<HabitBehaviorType>(
@@ -62,6 +79,7 @@ export function HabitForm({
   );
   const [startDate, setStartDate] = useState(habit?.start_date ?? todayKey());
   const [color, setColor] = useState(habit?.color ?? COLORS[0]);
+  const [icon, setIcon] = useState<string | null>(habit?.icon ?? null);
   const [step, setStep] = useState<Step>("details");
   const [markedDays, setMarkedDays] = useState<Set<string>>(new Set());
 
@@ -74,6 +92,7 @@ export function HabitForm({
     setSchedule(scheduleFormFromHabit());
     setStartDate(todayKey());
     setColor(COLORS[0]);
+    setIcon(null);
     setStep("details");
     setMarkedDays(new Set());
   }
@@ -91,33 +110,42 @@ export function HabitForm({
       behavior_type: behavior,
       start_date: startDate,
       color,
+      icon: normalizeHabitSymbol(icon),
       ...habitScheduleInput(schedule),
     };
 
-    startTransition(async () => {
-      const result = habit
-        ? await updateHabit(habit.id, payload)
-        : await createHabit(payload);
-
-      if (!result.ok) {
-        setError(result.error);
-        toast.error(result.error);
-        return;
-      }
-
-      if (!habit && historyDates !== null) {
-        await seedHistoryFromStart(
-          result.data.id,
-          behavior,
-          startDate,
-          historyDates,
-        );
-      }
-
-      toast.success(habit ? "Habit updated." : `"${result.data.name}" added.`);
+    const finish = (habitName: string) => {
+      toast.success(habit ? "Habit updated." : `"${habitName}" added.`);
       resetForm();
       onDone?.();
-      router.refresh();
+      if (!onDone) router.push("/habits");
+    };
+
+    if (habit) {
+      updateMutation.mutate(payload, {
+        onSuccess: (data) => finish(data.name),
+        onError: (err) => setError(err.userMessage),
+      });
+      return;
+    }
+
+    createMutation.mutate(payload, {
+      onSuccess: (created) => {
+        if (historyDates !== null) {
+          seedMutation.mutate(
+            {
+              habitId: created.id,
+              behavior,
+              startDate,
+              dates: historyDates,
+            },
+            { onSuccess: () => finish(created.name) },
+          );
+        } else {
+          finish(created.name);
+        }
+      },
+      onError: (err) => setError(err.userMessage),
     });
   }
 
@@ -233,8 +261,9 @@ export function HabitForm({
 
   return (
     <form
+      id={formId}
       onSubmit={onDetailsSubmit}
-      className={`habit-form ${compact ? "compact" : ""}`}
+      className={`habit-form ${compact ? "compact habit-form-modal" : ""}`}
     >
       <div className="flex flex-col gap-2">
         <Label htmlFor="habit-name">Name</Label>
@@ -242,49 +271,58 @@ export function HabitForm({
           id="habit-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={behavior !== "build" ? "Quit smoking" : "Morning stretch"}
+          placeholder={behavior !== "build" ? "Quit smoking" : "e.g. Morning stretch"}
           required
           maxLength={80}
         />
       </div>
 
-      <ToggleGroup
-        type="single"
-        value={behavior}
-        onValueChange={(v) => v && setBehavior(v as HabitBehaviorType)}
-        className="w-full justify-stretch rounded-lg bg-muted p-1"
-        size="sm"
-        spacing={0}
-      >
-        <ToggleGroupItem value="build" className="flex-1" aria-label="Grow a habit">
-          Build
-        </ToggleGroupItem>
-        <ToggleGroupItem value="reduce" className="flex-1" aria-label="Reduce a habit">
-          Reduce
-        </ToggleGroupItem>
-        <ToggleGroupItem value="avoid" className="flex-1" aria-label="Avoid a habit">
-          Avoid
-        </ToggleGroupItem>
-      </ToggleGroup>
+      <div className="flex flex-col gap-2">
+        <Label>Type</Label>
+        <ToggleGroup
+          type="single"
+          value={behavior}
+          onValueChange={(v) => v && setBehavior(v as HabitBehaviorType)}
+          className="habit-segment-toggle habit-type-toggle w-full justify-stretch"
+          size="sm"
+          spacing={0}
+        >
+          <ToggleGroupItem value="build" className="flex-1 gap-1.5" aria-label="Grow a habit">
+            <TrendingUp className="size-3.5 shrink-0" aria-hidden />
+            Build
+          </ToggleGroupItem>
+          <ToggleGroupItem value="reduce" className="flex-1 gap-1.5" aria-label="Reduce a habit">
+            <TrendingDown className="size-3.5 shrink-0 text-[var(--reduce-accent)]" aria-hidden />
+            Reduce
+          </ToggleGroupItem>
+          <ToggleGroupItem value="avoid" className="flex-1 gap-1.5" aria-label="Avoid a habit">
+            <Ban className="size-3.5 shrink-0 text-[var(--avoid-accent)]" aria-hidden />
+            Avoid
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
 
-      <ToggleGroup
-        type="single"
-        value={schedule.mode}
-        onValueChange={(v) => v && setSchedule((s) => ({ ...s, mode: v as ScheduleFormState["mode"] }))}
-        className="w-full justify-stretch rounded-lg bg-muted p-1"
-        size="sm"
-        spacing={0}
-      >
-        <ToggleGroupItem value="daily" className="flex-1" aria-label="Every day">
-          Daily
-        </ToggleGroupItem>
-        <ToggleGroupItem value="weekly" className="flex-1" aria-label="Weekly">
-          Weekly
-        </ToggleGroupItem>
-        <ToggleGroupItem value="custom" className="flex-1" aria-label="Custom schedule">
-          Custom
-        </ToggleGroupItem>
-      </ToggleGroup>
+      <div className="flex flex-col gap-2">
+        <Label>Repeat</Label>
+        <ToggleGroup
+          type="single"
+          value={schedule.mode}
+          onValueChange={(v) => v && setSchedule((s) => ({ ...s, mode: v as ScheduleFormState["mode"] }))}
+          className="habit-segment-toggle w-full justify-stretch"
+          size="sm"
+          spacing={0}
+        >
+          <ToggleGroupItem value="daily" className="flex-1" aria-label="Every day">
+            Daily
+          </ToggleGroupItem>
+          <ToggleGroupItem value="weekly" className="flex-1" aria-label="Weekly">
+            Weekly
+          </ToggleGroupItem>
+          <ToggleGroupItem value="custom" className="flex-1" aria-label="Custom schedule">
+            Custom
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
 
       {schedule.mode === "weekly" ? (
         <div className="flex flex-col gap-2">
@@ -298,7 +336,7 @@ export function HabitForm({
                 weeklyVariant: v as ScheduleFormState["weeklyVariant"],
               }))
             }
-            className="w-full justify-stretch rounded-lg bg-muted p-1"
+            className="w-full justify-stretch"
             size="sm"
             spacing={0}
           >
@@ -363,7 +401,7 @@ export function HabitForm({
                 customVariant: v as ScheduleFormState["customVariant"],
               }))
             }
-            className="w-full justify-stretch rounded-lg bg-muted p-1"
+            className="w-full justify-stretch"
             size="sm"
             spacing={0}
           >
@@ -424,15 +462,22 @@ export function HabitForm({
       ) : null}
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="habit-start">{behavior !== "build" ? "Start date" : "Started on"}</Label>
-        <Input
-          id="habit-start"
-          type="date"
-          value={startDate}
-          max={todayKey()}
-          onChange={(e) => setStartDate(e.target.value)}
-          required
-        />
+        <Label htmlFor="habit-start">{behavior !== "build" ? "Start date" : "Start date"}</Label>
+        <div className="habit-date-field">
+          <CalendarDays className="habit-date-icon size-4" aria-hidden />
+          <span className="habit-date-display" aria-hidden>
+            {parseDateKey(startDate).toLocaleDateString(LOCALE)}
+          </span>
+          <Input
+            id="habit-start"
+            type="date"
+            className="habit-date-input"
+            value={startDate}
+            max={todayKey()}
+            onChange={(e) => setStartDate(e.target.value)}
+            required
+          />
+        </div>
       </div>
 
       {needsHistoryOnboarding ? (
@@ -445,6 +490,11 @@ export function HabitForm({
           </AlertDescription>
         </Alert>
       ) : null}
+
+      <div className="flex flex-col gap-2">
+        <Label>Icon or emoji</Label>
+        <IconPicker value={icon} color={color} onChange={setIcon} />
+      </div>
 
       <div className="flex flex-col gap-2">
         <Label>Color</Label>
@@ -464,15 +514,26 @@ export function HabitForm({
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending
-          ? "Saving…"
-          : habit
-            ? "Save changes"
-            : needsHistoryOnboarding
-              ? "Continue"
-              : "Add habit"}
-      </Button>
+      {compact && onCancel ? (
+        <div className="habit-modal-footer">
+          <Button type="button" variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={pending}>
+            {needsHistoryOnboarding ? "Continue" : "Add habit"}
+          </Button>
+        </div>
+      ) : hideSubmit ? null : (
+        <Button type="submit" disabled={pending} className="w-full">
+          {pending
+            ? "Saving…"
+            : habit
+              ? "Save changes"
+              : needsHistoryOnboarding
+                ? "Continue"
+                : "Add habit"}
+        </Button>
+      )}
     </form>
   );
 }

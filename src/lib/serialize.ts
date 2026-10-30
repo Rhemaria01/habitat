@@ -47,6 +47,7 @@ export function toHabit(row: HabitModel): Habit {
     personal_reason: row.personal_reason,
     start_date: dateKey(row.start_date),
     color: row.color,
+    icon: row.icon ?? null,
     sort_order: row.sort_order,
     archived_at: row.archived_at ? iso(row.archived_at) : null,
     status: (row.status as Habit["status"]) ?? "active",
@@ -89,6 +90,7 @@ export function toHabit(row: HabitModel): Habit {
     planned_time: row.planned_time,
     tracking_type: row.tracking_type ?? "binary",
     tracking_unit: row.tracking_unit,
+    tracking_target: row.tracking_target,
     is_priority: row.is_priority ?? false,
   };
 }

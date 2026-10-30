@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
-import { Sprout } from "lucide-react";
-import { toast } from "sonner";
+import { useMemo, useRef, useState } from "react";
+import { useStaggerHabitGrid } from "@/components/animated/AnimatedHabitCard";
+import { LayoutGrid, List, Plus, Search, Sprout } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -22,9 +21,15 @@ import {
   rectSortingStrategy,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { reorderHabits } from "@/app/actions/habits";
+import { AddHabitDialog } from "@/components/AddHabitDialog";
+import {
+  HabitsGridSkeleton,
+  QueryErrorBanner,
+  QueryLoadingOverlay,
+} from "@/components/api/QueryLoading";
 import { HabitCard } from "@/components/HabitCard";
-import { HabitForm } from "@/components/HabitForm";
+import { useHabitsQuery } from "@/hooks/api/use-habits";
+import { useReorderHabitsMutation } from "@/hooks/api/use-mutations";
 import type { HabitWithLogs } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +39,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Input } from "@/components/ui/input";
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -44,6 +50,7 @@ type HabitsClientProps = {
 };
 
 type Filter = "all" | "build" | "reduce" | "avoid";
+type ViewMode = "grid" | "list";
 
 function orderFromHabits(habits: HabitWithLogs[]) {
   return habits.map((h) => h.id);
@@ -55,12 +62,23 @@ function isSameSet(a: string[], b: string[]) {
   return b.every((id) => set.has(id));
 }
 
-export function HabitsClient({ habits }: HabitsClientProps) {
-  const [open, setOpen] = useState(habits.length === 0);
+export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
+  const {
+    data: habits = initialHabits,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+  } = useHabitsQuery({ initialData: initialHabits });
+
+  const reorderMutation = useReorderHabitsMutation();
+
+  const [addOpen, setAddOpen] = useState(habits.length === 0);
   const [filter, setFilter] = useState<Filter>("all");
+  const [view, setView] = useState<ViewMode>("grid");
+  const [query, setQuery] = useState("");
   const [order, setOrder] = useState(() => orderFromHabits(habits));
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
 
   const serverOrder = orderFromHabits(habits);
   if (!isSameSet(order, serverOrder)) {
@@ -74,15 +92,16 @@ export function HabitsClient({ habits }: HabitsClientProps) {
       .filter((h): h is HabitWithLogs => Boolean(h));
   }, [habits, order]);
 
-  const filtered = useMemo(
-    () =>
-      items.filter(
-        (h) => filter === "all" || h.behavior_type === filter,
-      ),
-    [items, filter],
-  );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((h) => {
+      if (filter !== "all" && h.behavior_type !== filter) return false;
+      if (q && !h.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [items, filter, query]);
 
-  const sortable = filter === "all";
+  const sortable = filter === "all" && !query.trim();
 
   const activeHabit = items.find((h) => h.id === activeId) ?? null;
 
@@ -113,26 +132,38 @@ export function HabitsClient({ habits }: HabitsClientProps) {
     const next = arrayMove(order, oldIndex, newIndex);
     setOrder(next);
 
-    startTransition(async () => {
-      const result = await reorderHabits(next);
-      if (!result.ok) {
-        setOrder(previous);
-        toast.error(result.error);
-      }
+    reorderMutation.mutate(next, {
+      onError: () => setOrder(previous),
     });
   }
 
+  const gridRef = useRef<HTMLElement>(null);
+
+  useStaggerHabitGrid(gridRef, ".habit-card", [filter, query, filtered.length, view]);
+
+  const gridClass =
+    view === "grid" ? "habit-grid habit-grid-dense" : "habit-list habit-list-dense";
+
   const grid = (
-    <section className="habit-grid" aria-label="Habits">
+    <section
+      ref={gridRef}
+      className={gridClass}
+      aria-label="Habits"
+      data-view={view}
+    >
+      {filtered.length === 0 && habits.length > 0 ? (
+        <p className="habits-empty-filter">No habits match your search.</p>
+      ) : null}
       {filtered.map((habit, index) =>
         sortable ? (
-          <HabitCard key={habit.id} habit={habit} index={index} />
+          <HabitCard key={habit.id} habit={habit} index={index} layout={view} />
         ) : (
           <HabitCard
             key={habit.id}
             habit={habit}
             index={index}
             sortable={false}
+            layout={view}
           />
         ),
       )}
@@ -140,48 +171,98 @@ export function HabitsClient({ habits }: HabitsClientProps) {
   );
 
   return (
-    <div className="habits-page">
-      {habits.length === 0 ? (
-        <Empty className="animate-fade-up">
+    <div className="habits-page relative">
+      <QueryLoadingOverlay
+        show={isFetching && !isLoading}
+        label="Refreshing habits…"
+      />
+      {isError ? <QueryErrorBanner error={error} className="mb-3" /> : null}
+
+      <header className="habits-page-head animate-fade-up">
+        <div className="habits-page-title">
+          <h1>Habits</h1>
+          <p className="habits-page-count">
+            {habits.length} active habit{habits.length === 1 ? "" : "s"}
+            {sortable ? " · drag to reorder" : ""}
+          </p>
+        </div>
+        <div className="habits-page-toolbar">
+          <Button
+            type="button"
+            size="sm"
+            className="habits-add-btn shrink-0"
+            onClick={() => setAddOpen(true)}
+          >
+            <Plus className="size-4" aria-hidden />
+            Add habit
+          </Button>
+          <ToggleGroup
+            type="single"
+            value={filter}
+            onValueChange={(v) => v && setFilter(v as Filter)}
+            className="habits-filter-toggle"
+            size="sm"
+            spacing={0}
+            aria-label="Filter habits"
+          >
+            <ToggleGroupItem value="all">All</ToggleGroupItem>
+            <ToggleGroupItem value="build">Build</ToggleGroupItem>
+            <ToggleGroupItem value="reduce">Reduce</ToggleGroupItem>
+            <ToggleGroupItem value="avoid">Avoid</ToggleGroupItem>
+          </ToggleGroup>
+          <ToggleGroup
+            type="single"
+            value={view}
+            onValueChange={(v) => v && setView(v as ViewMode)}
+            className="habits-view-toggle"
+            size="sm"
+            spacing={0}
+            aria-label="View mode"
+          >
+            <ToggleGroupItem value="grid" aria-label="Grid view">
+              <LayoutGrid className="size-3.5" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="List view">
+              <List className="size-3.5" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      </header>
+
+      {isLoading && habits.length === 0 ? (
+        <HabitsGridSkeleton />
+      ) : habits.length === 0 ? (
+        <Empty className="habits-empty animate-fade-up">
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <Sprout aria-hidden />
             </EmptyMedia>
             <EmptyTitle>Add your first habit</EmptyTitle>
             <EmptyDescription>
-              Track something you want to do more of, or something you want to
-              cut back on.
+              Track something you want to do more of, or cut back on.
             </EmptyDescription>
           </EmptyHeader>
+          <Button type="button" className="mt-3" onClick={() => setAddOpen(true)}>
+            Add habit
+          </Button>
         </Empty>
       ) : (
         <>
-          <ToggleGroup
-            type="single"
-            value={filter}
-            onValueChange={(v) => v && setFilter(v as Filter)}
-            className="w-full justify-stretch rounded-lg bg-muted p-1"
-            size="sm"
-            spacing={0}
-            aria-label="Filter habits"
-          >
-            <ToggleGroupItem value="all" className="flex-1">
-              All
-            </ToggleGroupItem>
-            <ToggleGroupItem value="build" className="flex-1">
-              Build
-            </ToggleGroupItem>
-            <ToggleGroupItem value="reduce" className="flex-1">
-              Reduce
-            </ToggleGroupItem>
-            <ToggleGroupItem value="avoid" className="flex-1">
-              Avoid
-            </ToggleGroupItem>
-          </ToggleGroup>
-
-          {sortable ? (
-            <p className="grid-hint">Drag the handle to rearrange</p>
-          ) : null}
+          <div className="habits-search-row animate-fade-up">
+            <div className="habits-search relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search habits…"
+                className="habits-search-input h-10 pl-9 text-sm"
+                aria-label="Search habits"
+              />
+            </div>
+          </div>
 
           {sortable ? (
             <DndContext
@@ -197,7 +278,7 @@ export function HabitsClient({ habits }: HabitsClientProps) {
               <DragOverlay dropAnimation={null}>
                 {activeHabit ? (
                   <div className="drag-overlay">
-                    <HabitCard habit={activeHabit} overlay />
+                    <HabitCard habit={activeHabit} overlay layout={view} />
                   </div>
                 ) : null}
               </DragOverlay>
@@ -208,25 +289,7 @@ export function HabitsClient({ habits }: HabitsClientProps) {
         </>
       )}
 
-      <section
-        className="panel animate-fade-up"
-        style={{ animationDelay: "80ms" }}
-      >
-        <div className="panel-head">
-          <h2>{open ? "New habit" : "Add a habit"}</h2>
-          {habits.length > 0 ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setOpen((v) => !v)}
-            >
-              {open ? "Hide" : "Quick add"}
-            </Button>
-          ) : null}
-        </div>
-        {open ? <HabitForm onDone={() => setOpen(false)} /> : null}
-      </section>
+      <AddHabitDialog open={addOpen} onOpenChange={setAddOpen} />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useOptimistic, useTransition, type CSSProperties } from "react";
-import { useRouter } from "next/navigation";
-import { toggleHabitDay } from "@/app/actions/habits";
+import { useEffect, useMemo, useOptimistic, useRef, type CSSProperties } from "react";
+import { animateHeatmapCells } from "@/animations/calendar-animations";
+import { useToggleHabitDayMutation } from "@/hooks/api/use-mutations";
 import { LOCALE, formatLongDate, toDateKey, todayKey } from "@/lib/dates";
 import type { HabitBehaviorType, HabitLog } from "@/lib/types";
 
@@ -93,8 +93,7 @@ export function Heatmap({
   logs,
   year = new Date().getFullYear(),
 }: HeatmapProps) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
+  const toggleMutation = useToggleHabitDayMutation();
   const [optimisticLogs, setLogs] = useOptimistic(logs);
 
   const activeDates = useMemo(() => {
@@ -112,39 +111,42 @@ export function Heatmap({
   );
 
   function toggle(dateKey: string, currentlyActive: boolean) {
-    startTransition(async () => {
-      setLogs((current) => {
-        if (currentlyActive) {
-          return current.filter((l) => l.log_date !== dateKey);
-        }
-        return [
-          ...current.filter((l) => l.log_date !== dateKey),
-          {
-            id: `optimistic-${dateKey}`,
-            habit_id: habitId,
-            log_date: dateKey,
-            status: behavior === "build" ? "completed" : "lapse",
-            note: null,
-            numeric_value: null,
-            completion_level: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ];
-      });
+    setLogs((current) => {
+      if (currentlyActive) {
+        return current.filter((l) => l.log_date !== dateKey);
+      }
+      return [
+        ...current.filter((l) => l.log_date !== dateKey),
+        {
+          id: `optimistic-${dateKey}`,
+          habit_id: habitId,
+          log_date: dateKey,
+          status: behavior === "build" ? "completed" : "lapse",
+          note: null,
+          numeric_value: null,
+          completion_level: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+    });
 
-      const result = await toggleHabitDay(
-        habitId,
-        behavior,
-        dateKey,
-        currentlyActive,
-      );
-      if (result.ok) router.refresh();
+    toggleMutation.mutate({
+      habitId,
+      behavior,
+      dateKey,
+      wasActive: currentlyActive,
     });
   }
 
   const weeks = Math.ceil(cells.length / 7);
   const months = useMemo(() => monthLabels(year, weeks), [year, weeks]);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!gridRef.current) return;
+    return animateHeatmapCells(gridRef.current, ".heat-cell:not(.empty)");
+  }, [year]);
 
   return (
     <div
@@ -174,6 +176,7 @@ export function Heatmap({
             </div>
 
             <div
+              ref={gridRef}
               className="heatmap-grid"
               role="grid"
               aria-label={`${year} activity`}

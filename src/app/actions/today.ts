@@ -7,16 +7,27 @@ import { prisma } from "@/lib/db";
 import { addDays, todayKey, weekStartKey } from "@/lib/dates";
 import { adherenceForRange } from "@/lib/domain/adherence";
 import { dbDate, toHabitWithLogs } from "@/lib/serialize";
+import { computeStreakStats } from "@/lib/streaks";
 import type { HabitLogStatus, TodayHabitItem } from "@/lib/types";
-import type { ActionResult } from "@/app/actions/settings";
+import type { ActionResult } from "@/lib/api/types";
+import { timeGreeting } from "@/lib/time-of-day";
 
 async function guard() {
   await requireAuth();
 }
 
+export type TodayDashboard = {
+  greeting: string;
+  todayProgress: number | null;
+  currentStreak: number;
+  bestStreak: number;
+  monthLogCount: number;
+};
+
 export async function getTodayData(dateKey: string = todayKey()): Promise<{
   items: TodayHabitItem[];
   weekAdherence: number | null;
+  dashboard: TodayDashboard;
 }> {
   await guard();
 
@@ -25,6 +36,31 @@ export async function getTodayData(dateKey: string = todayKey()): Promise<{
     orderBy: [{ is_priority: "desc" }, { sort_order: "asc" }],
     include: { logs: { where: { log_date: dbDate(dateKey) } } },
   });
+
+  const monthStart = `${dateKey.slice(0, 7)}-01`;
+  const [streakRows, monthLogCount] = await Promise.all([
+    prisma.habit.findMany({
+      where: { status: "active", archived_at: null },
+      include: { logs: { orderBy: { log_date: "asc" } } },
+    }),
+    prisma.habitLog.count({
+      where: { log_date: { gte: dbDate(monthStart), lte: dbDate(dateKey) } },
+    }),
+  ]);
+
+  let currentStreak = 0;
+  let bestStreak = 0;
+  for (const row of streakRows) {
+    const habit = toHabitWithLogs(row);
+    const stats = computeStreakStats(
+      habit.behavior_type,
+      habit.start_date,
+      habit.logs,
+      dateKey,
+    );
+    currentStreak = Math.max(currentStreak, stats.currentStreak);
+    bestStreak = Math.max(bestStreak, stats.bestStreak);
+  }
 
   const items: TodayHabitItem[] = habits.map((row) => {
     const habit = toHabitWithLogs({ ...row, logs: row.logs });
@@ -63,9 +99,29 @@ export async function getTodayData(dateKey: string = todayKey()): Promise<{
     }
   }
 
+  const scheduledItems = items.filter((i) => i.scheduled);
+  const doneToday = scheduledItems.filter(
+    (i) =>
+      i.log &&
+      i.log.status !== "missed" &&
+      i.log.status !== "lapse" &&
+      i.log.status !== "skipped",
+  ).length;
+  const todayProgress =
+    scheduledItems.length === 0
+      ? null
+      : Math.round((doneToday / scheduledItems.length) * 100);
+
   return {
     items,
     weekAdherence: rateCount ? Math.round((totalRate / rateCount) * 10) / 10 : null,
+    dashboard: {
+      greeting: timeGreeting(),
+      todayProgress,
+      currentStreak,
+      bestStreak,
+      monthLogCount,
+    },
   };
 }
 
@@ -109,6 +165,8 @@ export async function setHabitLog(
     revalidatePath("/");
     revalidatePath("/today");
     revalidatePath("/habits");
+    revalidatePath("/calendar");
+    revalidatePath("/stats");
     revalidatePath(`/habits/${habitId}`);
     return { ok: true, data: undefined };
   } catch (e) {

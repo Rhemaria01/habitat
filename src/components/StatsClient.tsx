@@ -1,114 +1,100 @@
 "use client";
 
-import StatsCounter from "@/components/ui/stats-counter";
+import { useState } from "react";
 import type { StatsDashboard } from "@/app/actions/stats";
+import {
+  QueryErrorBanner,
+  QueryLoadingOverlay,
+} from "@/components/api/QueryLoading";
+import { StatsHabitTable } from "@/components/stats/StatsHabitTable";
+import { StatsInsightsSidebar } from "@/components/stats/StatsInsightsSidebar";
+import { StatsKpiRow } from "@/components/stats/StatsKpiRow";
+import { StatsLogDonut } from "@/components/stats/StatsLogDonut";
+import { StatsMonthHeatmap } from "@/components/stats/StatsMonthHeatmap";
+import { StatsToolbar } from "@/components/stats/StatsToolbar";
+import { StatsTrendChart } from "@/components/stats/StatsTrendChart";
+import {
+  useStatsDashboardQuery,
+  type StatsQueryParams,
+} from "@/hooks/api/use-stats";
+import type { StatsRangeKey } from "@/lib/stats-aggregate";
 
 type StatsClientProps = {
-  data: StatsDashboard;
+  initialData: StatsDashboard;
+  initialYear: number;
+  initialMonth: number;
+  initialRange: StatsRangeKey;
 };
 
-function AdherenceChart({ points }: { points: StatsDashboard["last30Days"] }) {
-  const withData = points.filter((p) => p.adherence !== null);
-  const max = 100;
+export function StatsClient({
+  initialData,
+  initialYear,
+  initialMonth,
+  initialRange,
+}: StatsClientProps) {
+  const [year, setYear] = useState(initialYear);
+  const [month, setMonth] = useState(initialMonth);
+  const [range, setRange] = useState<StatsRangeKey>(initialRange);
+
+  const params: StatsQueryParams = { year, month, range };
+
+  const {
+    data = initialData,
+    isFetching,
+    isLoading,
+    isError,
+    error,
+  } = useStatsDashboardQuery(params, {
+    initialData:
+      year === initialYear && month === initialMonth && range === initialRange
+        ? initialData
+        : undefined,
+  });
+
+  function onMonthChange(y: number, m: number) {
+    setYear(y);
+    setMonth(m);
+  }
 
   return (
-    <div className="stats-chart" role="img" aria-label="30-day adherence chart">
-      <div className="stats-chart-bars">
-        {points.map((p) => {
-          const h =
-            p.adherence === null ? 4 : Math.max(6, (p.adherence / max) * 100);
-          return (
-            <div key={p.dateKey} className="stats-chart-col">
-              <div
-                className="stats-chart-bar"
-                style={{ height: `${h}%` }}
-                title={
-                  p.adherence === null
-                    ? `${p.label}: no scheduled habits`
-                    : `${p.label}: ${p.adherence}% (${p.completed}/${p.scheduled})`
-                }
-              />
-            </div>
-          );
-        })}
-      </div>
-      <div className="stats-chart-labels">
-        <span>{points[0]?.label}</span>
-        <span>{points[Math.floor(points.length / 2)]?.label}</span>
-        <span>{points[points.length - 1]?.label}</span>
-      </div>
-      {withData.length === 0 ? (
-        <p className="stats-chart-empty text-sm text-muted-foreground">
-          Log habits to see trends here.
-        </p>
-      ) : null}
-    </div>
-  );
-}
+    <div className="stats-v2 relative">
+      <QueryLoadingOverlay
+        show={isFetching && !isLoading}
+        label="Refreshing stats…"
+      />
+      {isError ? <QueryErrorBanner error={error} className="mb-3" /> : null}
 
-export function StatsClient({ data }: StatsClientProps) {
-  const counters = [
-    {
-      label: "Active habits",
-      value: data.activeHabits,
-      suffix: "",
-    },
-    {
-      label: "Logs this month",
-      value: data.monthLogCount,
-      suffix: "",
-    },
-    {
-      label: "Best 30-day streak",
-      value: data.currentStreakBest,
-      suffix: data.currentStreakBest === 1 ? " day" : " days",
-    },
-  ];
+      <StatsToolbar
+        year={year}
+        month={month}
+        range={range}
+        onMonthChange={onMonthChange}
+        onRangeChange={setRange}
+      />
 
-  return (
-    <div className="stats-page space-y-6">
-      <section className="panel">
-        <div className="panel-head">
-          <h2>Overview</h2>
-          {data.weekAdherence !== null ? (
-            <p className="panel-meta">
-              This week:{" "}
-              <StatsCounter
-                value={data.weekAdherence}
-                suffix="%"
-                decimals={1}
-                className="font-semibold text-foreground"
-              />{" "}
-              avg adherence
-            </p>
-          ) : (
-            <p className="panel-meta">No adherence data yet this week</p>
-          )}
+      <StatsKpiRow data={data} />
+
+      <div className="stats-v2-grid">
+        <div className="stats-v2-main">
+          <StatsMonthHeatmap
+            days={data.monthHeatmapDays}
+            daysInMonth={data.daysInMonth}
+            monthLabel={data.monthLabel}
+          />
+          <div className="stats-v2-charts">
+            <StatsTrendChart points={data.trendSeries} />
+            <StatsLogDonut breakdown={data.logBreakdown} />
+          </div>
+          <StatsHabitTable rows={data.habitRows} />
         </div>
-        <ul className="stats-counter-grid">
-          {counters.map((c) => (
-            <li key={c.label} className="stats-counter-card">
-              <p className="stats-counter-value">
-                <StatsCounter
-                  value={c.value}
-                  suffix={c.suffix}
-                  duration={1.8}
-                  className="text-2xl font-bold tracking-tight text-foreground"
-                />
-              </p>
-              <p className="stats-counter-label">{c.label}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="panel">
-        <div className="panel-head">
-          <h2>30-day adherence</h2>
-          <p className="panel-meta">Daily completion across scheduled habits</p>
-        </div>
-        <AdherenceChart points={data.last30Days} />
-      </section>
+        <StatsInsightsSidebar
+          insights={data.insights}
+          behaviorCounts={data.behaviorCounts}
+          breakdown={data.logBreakdown}
+          deltaPercent={data.deltaPercent}
+          avgAdherence={data.avgAdherence}
+        />
+      </div>
     </div>
   );
 }

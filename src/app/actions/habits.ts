@@ -15,9 +15,9 @@ import type {
   HabitWithLogs,
 } from "@/lib/types";
 
-export type ActionResult<T = void> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+import type { ActionResult } from "@/lib/api/types";
+
+export type { ActionResult };
 
 async function guard() {
   await requireAuth();
@@ -38,6 +38,7 @@ function habitData(input: HabitInput) {
     personal_reason: input.personal_reason?.trim() || null,
     start_date: dbDate(input.start_date),
     color: input.color,
+    icon: input.icon?.trim() || null,
     status: input.status ?? "active",
     frequency: input.frequency ?? "daily",
     schedule_kind: scheduleKind,
@@ -74,6 +75,7 @@ function habitData(input: HabitInput) {
     recovery_reminder: input.recovery_reminder ?? true,
     tracking_type: input.tracking_type ?? "binary",
     tracking_unit: input.tracking_unit?.trim() || null,
+    tracking_target: input.tracking_target ?? null,
     is_priority: input.is_priority ?? false,
   };
 

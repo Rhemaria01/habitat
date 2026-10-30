@@ -12,6 +12,7 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   // next-pwa injects webpack config; keep Turbopack happy if used explicitly
   turbopack: {},
 };

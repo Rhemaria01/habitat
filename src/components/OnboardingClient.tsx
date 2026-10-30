@@ -1,21 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
 import Link from "next/link";
-import { completeOnboarding } from "@/app/actions/onboarding";
 import { HabitForm } from "@/components/HabitForm";
 import { Button } from "@/components/ui/button";
+import { useCompleteOnboardingMutation } from "@/hooks/api/use-mutations";
 
 export function OnboardingClient() {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const completeMutation = useCompleteOnboardingMutation();
 
   function finish() {
-    startTransition(async () => {
-      await completeOnboarding();
-      router.push("/");
-      router.refresh();
+    completeMutation.mutate(undefined, {
+      onSuccess: () => {
+        router.push("/");
+      },
     });
   }
 
@@ -39,8 +38,13 @@ export function OnboardingClient() {
       </section>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" disabled={pending} onClick={finish}>
-          Skip for now
+        <Button
+          type="button"
+          variant="outline"
+          disabled={completeMutation.isPending}
+          onClick={finish}
+        >
+          {completeMutation.isPending ? "Saving…" : "Skip for now"}
         </Button>
         <Button type="button" variant="ghost" asChild>
           <Link href="/habits">Browse habits</Link>

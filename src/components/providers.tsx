@@ -1,22 +1,28 @@
 "use client";
 
+import { QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "motion/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { HabitatPets } from "@/components/pets/HabitatPets";
+import { getQueryClient } from "@/lib/api/query-client";
 
 /**
  * Client-side providers wrapped around the whole app:
  * tooltips (Radix), reduced-motion preference, and toasts.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
+  const queryClient = getQueryClient();
+
   return (
-    <TooltipProvider>
-      <MotionConfig reducedMotion="user">
-        {children}
-        <HabitatPets />
-        <Toaster position="bottom-center" />
-      </MotionConfig>
-    </TooltipProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <MotionConfig reducedMotion="user">
+          <HabitatPets />
+          {children}
+          <Toaster position="bottom-center" />
+        </MotionConfig>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }

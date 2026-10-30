@@ -7,9 +7,9 @@ import { prisma } from "@/lib/db";
 import { toProfile } from "@/lib/serialize";
 import type { Profile } from "@/lib/types";
 
-export type ActionResult<T = void> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+import type { ActionResult } from "@/lib/api/types";
+
+export type { ActionResult };
 
 async function guard() {
   await requireAuth();

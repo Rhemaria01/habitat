@@ -5,16 +5,26 @@ import { todayKey } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+type HomePageProps = {
+  searchParams: Promise<{ date?: string }>;
+};
+
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const { date } = await searchParams;
   const today = todayKey();
+  let dateKey = today;
+  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date) && date <= today) {
+    dateKey = date;
+  }
+
   let error: string | null = null;
   let payload: Awaited<ReturnType<typeof getTodayData>> | null = null;
   let recoveryHint: string | null = null;
 
   try {
     [payload, recoveryHint] = await Promise.all([
-      getTodayData(today),
-      getMissedRecoveryHint(today),
+      getTodayData(dateKey),
+      getMissedRecoveryHint(dateKey),
     ]);
   } catch (e) {
     error = e instanceof Error ? e.message : "Could not load today.";
@@ -25,7 +35,7 @@ export default async function HomePage() {
   );
 
   return (
-    <AppShell wide>
+    <AppShell wide todayLayout>
       {error ? (
         <section className="panel">
           <h2>Database update needed</h2>
@@ -45,10 +55,11 @@ export default async function HomePage() {
         </section>
       ) : payload ? (
         <TodayClient
-          dateKey={today}
+          dateKey={dateKey}
           items={payload.items}
           weekAdherence={payload.weekAdherence}
           recoveryHint={recoveryHint}
+          dashboard={payload.dashboard}
         />
       ) : null}
     </AppShell>

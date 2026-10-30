@@ -1,9 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useOptimistic, useTransition } from "react";
-import { toast } from "sonner";
-import { setHabitLog } from "@/app/actions/today";
+import { useOptimistic } from "react";
+import { useSetHabitLogMutation } from "@/hooks/api/use-mutations";
+import { outcomeFromLogStatus } from "@/lib/calendar-optimistic";
 import type { HabitBehaviorType, HabitLog, HabitLogStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +15,7 @@ import {
 type HabitLogControlProps = {
   habitId: string;
   behavior: HabitBehaviorType;
+  habitColor: string;
   logDate: string;
   log: HabitLog | null;
   scheduled: boolean;
@@ -28,12 +28,12 @@ function defaultCompleteStatus(behavior: HabitBehaviorType): HabitLogStatus {
 export function HabitLogControl({
   habitId,
   behavior,
+  habitColor,
   logDate,
   log,
   scheduled,
 }: HabitLogControlProps) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
+  const setLogMutation = useSetHabitLogMutation();
   const [optimisticLog, setOptimisticLog] = useOptimistic(log);
 
   if (!scheduled) {
@@ -41,25 +41,28 @@ export function HabitLogControl({
   }
 
   function apply(status: HabitLogStatus | null) {
-    startTransition(async () => {
-      setOptimisticLog(
-        status
-          ? {
-              id: optimisticLog?.id ?? "opt",
-              habit_id: habitId,
-              log_date: logDate,
-              status,
-              note: null,
-              numeric_value: null,
-              completion_level: null,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }
-          : null,
-      );
-      const result = await setHabitLog(habitId, logDate, status);
-      if (result.ok) router.refresh();
-      else toast.error(result.error);
+    setOptimisticLog(
+      status
+        ? {
+            id: optimisticLog?.id ?? "opt",
+            habit_id: habitId,
+            log_date: logDate,
+            status,
+            note: null,
+            numeric_value: null,
+            completion_level: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+        : null,
+    );
+    setLogMutation.mutate({
+      habitId,
+      dateKey: logDate,
+      status,
+      behavior,
+      habitColor,
+      prevOutcome: outcomeFromLogStatus(behavior, optimisticLog?.status ?? null),
     });
   }
 

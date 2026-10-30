@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useOptimistic, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toggleHabitDay } from "@/app/actions/habits";
+import { useEffect, useMemo, useRef, useState, useOptimistic } from "react";
+import { animateCalendarCells, pulseCalendarDay } from "@/animations/calendar-animations";
+import { useToggleHabitDayMutation } from "@/hooks/api/use-mutations";
 import {
   LOCALE,
   parseDateKey,
@@ -67,8 +67,7 @@ export function MonthCalendar({
   startDate,
   logs,
 }: MonthCalendarProps) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
+  const toggleMutation = useToggleHabitDayMutation();
   const [optimisticLogs, setLogs] = useOptimistic(logs);
 
   const today = todayKey();
@@ -85,6 +84,16 @@ export function MonthCalendar({
         .map((l) => l.log_date),
     );
   }, [optimisticLogs, behavior]);
+
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!gridRef.current) return;
+    return animateCalendarCells(
+      gridRef.current,
+      ".cal-day:not(.empty)",
+    );
+  }, [cursor.year, cursor.month]);
 
   const cells = useMemo(
     () => buildMonthCells(cursor.year, cursor.month, startDate, activeDates),
@@ -104,34 +113,31 @@ export function MonthCalendar({
   }
 
   function toggle(dateKey: string, currentlyActive: boolean) {
-    startTransition(async () => {
-      setLogs((current) => {
-        if (currentlyActive) {
-          return current.filter((l) => l.log_date !== dateKey);
-        }
-        return [
-          ...current.filter((l) => l.log_date !== dateKey),
-          {
-            id: `optimistic-${dateKey}`,
-            habit_id: habitId,
-            log_date: dateKey,
-            status: behavior === "build" ? "completed" : "lapse",
-            note: null,
-            numeric_value: null,
-            completion_level: null,
-            updated_at: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-          },
-        ];
-      });
+    setLogs((current) => {
+      if (currentlyActive) {
+        return current.filter((l) => l.log_date !== dateKey);
+      }
+      return [
+        ...current.filter((l) => l.log_date !== dateKey),
+        {
+          id: `optimistic-${dateKey}`,
+          habit_id: habitId,
+          log_date: dateKey,
+          status: behavior === "build" ? "completed" : "lapse",
+          note: null,
+          numeric_value: null,
+          completion_level: null,
+          updated_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        },
+      ];
+    });
 
-      const result = await toggleHabitDay(
-        habitId,
-        behavior,
-        dateKey,
-        currentlyActive,
-      );
-      if (result.ok) router.refresh();
+    toggleMutation.mutate({
+      habitId,
+      behavior,
+      dateKey,
+      wasActive: currentlyActive,
     });
   }
 
@@ -153,7 +159,7 @@ export function MonthCalendar({
         ))}
       </div>
 
-      <div className="cal-grid" role="grid" aria-label={`${label} activity`}>
+      <div ref={gridRef} className="cal-grid" role="grid" aria-label={`${label} activity`}>
         {cells.map((cell, i) => {
           if (!cell.key) {
             return <span key={`pad-${i}`} className="cal-day empty" />;
@@ -200,7 +206,12 @@ export function MonthCalendar({
                 month: "short",
                 day: "numeric",
               })}${mark ? ` · ${mark}` : ""}`}
-              onClick={() => toggle(cell.key!, cell.active)}
+              onClick={(e) => {
+                if (e.currentTarget instanceof HTMLElement) {
+                  pulseCalendarDay(e.currentTarget);
+                }
+                toggle(cell.key!, cell.active);
+              }}
             >
               {cell.day}
             </button>
