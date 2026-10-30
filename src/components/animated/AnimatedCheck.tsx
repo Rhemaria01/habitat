@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import {
   playHabitCompleteAnimation,
@@ -12,6 +13,7 @@ type AnimatedCheckProps = {
   onToggle: () => void;
   label: string;
   className?: string;
+  pending?: boolean;
   onCompleteAnimation?: () => void;
 };
 
@@ -20,6 +22,7 @@ export function AnimatedCheck({
   onToggle,
   label,
   className,
+  pending = false,
   onCompleteAnimation,
 }: AnimatedCheckProps) {
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -50,15 +53,23 @@ export function AnimatedCheck({
     <button
       ref={btnRef}
       type="button"
-      className={cn("today-check", checked && "on", className)}
+      className={cn(
+        "today-check",
+        checked && "on",
+        pending && "pending",
+        className,
+      )}
       aria-pressed={checked}
-      aria-label={label}
+      aria-busy={pending}
+      aria-label={pending ? "Saving…" : label}
+      disabled={pending}
       onClick={onToggle}
     >
       <svg
         className={cn(
           "today-check-mark",
           checked ? "opacity-100" : "opacity-0",
+          pending && "opacity-0",
         )}
         viewBox="0 0 16 16"
         aria-hidden
@@ -73,6 +84,11 @@ export function AnimatedCheck({
           strokeLinejoin="round"
         />
       </svg>
+      {pending ? (
+        <span className="today-check-spinner">
+          <Spinner className="size-3.5 text-current" aria-hidden />
+        </span>
+      ) : null}
     </button>
   );
 }

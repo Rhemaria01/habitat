@@ -1,7 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
-import { useOptimistic, type MouseEvent } from "react";
+import { useOptimistic, useState, type MouseEvent } from "react";
 import { useCalendarFly } from "@/components/calendar/CalendarFlyProvider";
 import { useSetHabitLogMutation } from "@/hooks/api/use-mutations";
 import {
@@ -13,6 +12,7 @@ import { canBackfillHabitDay } from "@/lib/calendar-day";
 import type { HabitBehaviorType, HabitLog, HabitLogStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 type CalendarDayBackfillProps = {
   habitId: string;
@@ -24,6 +24,22 @@ type CalendarDayBackfillProps = {
   scheduled: boolean;
   onUpdated?: () => void;
 };
+
+type PendingAction = HabitLogStatus | "clear" | null;
+
+function BackfillButton({
+  pending,
+  children,
+  ...props
+}: React.ComponentProps<typeof Button> & {
+  pending: boolean;
+}) {
+  return (
+    <Button {...props} aria-busy={pending}>
+      {pending ? <Spinner className="size-3.5" aria-hidden /> : children}
+    </Button>
+  );
+}
 
 export function CalendarDayBackfill({
   habitId,
@@ -38,6 +54,7 @@ export function CalendarDayBackfill({
   const setLogMutation = useSetHabitLogMutation();
   const fly = useCalendarFly();
   const [optimisticLog, setOptimisticLog] = useOptimistic(log);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
   if (!canBackfillHabitDay({ start_date: startDate }, dateKey)) {
     return (
@@ -57,7 +74,9 @@ export function CalendarDayBackfill({
 
   function apply(status: HabitLogStatus | null, event: MouseEvent<HTMLButtonElement>) {
     const prevOutcome = outcomeFromLogStatus(behavior, optimisticLog?.status ?? null);
+    const action: PendingAction = status === null ? "clear" : status;
 
+    setPendingAction(action);
     setOptimisticLog(buildOptimisticLog(habitId, dateKey, status));
 
     if (fly && isCelebrationStatus(behavior, status)) {
@@ -77,7 +96,10 @@ export function CalendarDayBackfill({
         habitColor,
         prevOutcome,
       },
-      { onSuccess: () => onUpdated?.() },
+      {
+        onSettled: () => setPendingAction(null),
+        onSuccess: () => onUpdated?.(),
+      },
     );
   }
 
@@ -85,16 +107,11 @@ export function CalendarDayBackfill({
     return optimisticLog?.status === status ? "default" : "outline";
   }
 
+  const busy = setLogMutation.isPending;
+
   return (
     <div className="cal-backfill">
-      <p className="cal-backfill-label">
-        Backfill this day
-        <span className="cal-backfill-pending" aria-live="polite">
-          {setLogMutation.isPending ? (
-            <Loader2 className="size-3.5 animate-spin" aria-hidden />
-          ) : null}
-        </span>
-      </p>
+      <p className="cal-backfill-label">Backfill this day</p>
       <div
         className={cn(
           "cal-backfill-actions",
@@ -105,68 +122,74 @@ export function CalendarDayBackfill({
       >
         {behavior === "build" ? (
           <>
-            <Button
+            <BackfillButton
               type="button"
               size="sm"
               variant={actionVariant("completed")}
-              disabled={setLogMutation.isPending}
+              disabled={busy}
+              pending={pendingAction === "completed"}
               onClick={(e) => apply("completed", e)}
             >
               ✓ Done
-            </Button>
-            <Button
+            </BackfillButton>
+            <BackfillButton
               type="button"
               size="sm"
               variant={actionVariant("partial")}
-              disabled={setLogMutation.isPending}
+              disabled={busy}
+              pending={pendingAction === "partial"}
               onClick={(e) => apply("partial", e)}
             >
               Partial
-            </Button>
-            <Button
+            </BackfillButton>
+            <BackfillButton
               type="button"
               size="sm"
               variant={actionVariant("missed")}
-              disabled={setLogMutation.isPending}
+              disabled={busy}
+              pending={pendingAction === "missed"}
               onClick={(e) => apply("missed", e)}
             >
               ✗ Missed
-            </Button>
+            </BackfillButton>
           </>
         ) : (
           <>
-            <Button
+            <BackfillButton
               type="button"
               size="sm"
               variant={actionVariant("maintained")}
-              disabled={setLogMutation.isPending}
+              disabled={busy}
+              pending={pendingAction === "maintained"}
               onClick={(e) => apply("maintained", e)}
             >
               Maintained
-            </Button>
-            <Button
+            </BackfillButton>
+            <BackfillButton
               type="button"
               size="sm"
               variant={actionVariant("lapse")}
-              disabled={setLogMutation.isPending}
+              disabled={busy}
+              pending={pendingAction === "lapse"}
               onClick={(e) => apply("lapse", e)}
             >
               Lapse
-            </Button>
+            </BackfillButton>
           </>
         )}
-        <Button
+        <BackfillButton
           type="button"
           size="sm"
           variant="ghost"
-          disabled={setLogMutation.isPending || !optimisticLog}
+          disabled={busy || !optimisticLog}
+          pending={pendingAction === "clear"}
           className={cn(!optimisticLog && "cal-backfill-clear-idle")}
           aria-hidden={!optimisticLog}
           tabIndex={optimisticLog ? 0 : -1}
           onClick={(e) => apply(null, e)}
         >
           Clear
-        </Button>
+        </BackfillButton>
       </div>
     </div>
   );

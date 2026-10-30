@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PastDaysPicker } from "@/components/PastDaysPicker";
 import {
@@ -18,11 +18,13 @@ import type {
 import {
   habitScheduleInput,
   scheduleFormFromHabit,
+  schedulePreviewLabel,
   validateScheduleForm,
   WEEKDAY_LABELS,
   type ScheduleFormState,
 } from "@/lib/domain/schedule-form";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -38,6 +40,19 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { IconPicker } from "@/components/IconPicker";
+import { HabitCardArtPicker } from "@/components/HabitCardArtPicker";
+import { HabitCardCoverStylePicker } from "@/components/HabitCardCoverStylePicker";
+import {
+  DEFAULT_HABIT_CARD_ART_KEY,
+  habitCardArtKeyForForm,
+  type HabitCardArtKey,
+} from "@/lib/content/habit-card-art";
+import {
+  DEFAULT_HABIT_CARD_COVER_STYLE,
+  habitCardCoverKeyForForm,
+  type HabitCardCoverStyle,
+  type HabitCardPreviewDraft,
+} from "@/lib/content/habit-card-cover";
 import { normalizeHabitSymbol } from "@/lib/habit-symbol";
 
 import { HABIT_PICKER_COLORS } from "@/lib/habitat-colors";
@@ -51,6 +66,7 @@ type HabitFormProps = {
   compact?: boolean;
   formId?: string;
   hideSubmit?: boolean;
+  onDraftChange?: (draft: HabitCardPreviewDraft) => void;
 };
 
 type Step = "details" | "history-ask" | "history-pick";
@@ -62,6 +78,7 @@ export function HabitForm({
   compact,
   formId,
   hideSubmit,
+  onDraftChange,
 }: HabitFormProps) {
   const router = useRouter();
   const createMutation = useCreateHabitMutation();
@@ -80,11 +97,39 @@ export function HabitForm({
   const [startDate, setStartDate] = useState(habit?.start_date ?? todayKey());
   const [color, setColor] = useState(habit?.color ?? COLORS[0]);
   const [icon, setIcon] = useState<string | null>(habit?.icon ?? null);
+  const [cardArtKey, setCardArtKey] = useState<HabitCardArtKey>(() =>
+    habitCardArtKeyForForm(habit),
+  );
+  const [coverStyle, setCoverStyle] = useState<HabitCardCoverStyle>(() =>
+    habitCardCoverKeyForForm(habit),
+  );
   const [step, setStep] = useState<Step>("details");
   const [markedDays, setMarkedDays] = useState<Set<string>>(new Set());
 
   const needsHistoryOnboarding = !habit && startDate < todayKey();
   const isReduce = behavior !== "build";
+
+  useEffect(() => {
+    if (!onDraftChange) return;
+    onDraftChange({
+      name,
+      behavior,
+      color,
+      icon,
+      cardArtKey,
+      coverStyle,
+      scheduleLabel: schedulePreviewLabel(schedule),
+    });
+  }, [
+    name,
+    behavior,
+    color,
+    icon,
+    cardArtKey,
+    coverStyle,
+    schedule,
+    onDraftChange,
+  ]);
 
   function resetForm() {
     setName("");
@@ -93,6 +138,8 @@ export function HabitForm({
     setStartDate(todayKey());
     setColor(COLORS[0]);
     setIcon(null);
+    setCardArtKey(DEFAULT_HABIT_CARD_ART_KEY);
+    setCoverStyle(DEFAULT_HABIT_CARD_COVER_STYLE);
     setStep("details");
     setMarkedDays(new Set());
   }
@@ -111,6 +158,8 @@ export function HabitForm({
       start_date: startDate,
       color,
       icon: normalizeHabitSymbol(icon),
+      card_art_key: cardArtKey,
+      card_cover_style: coverStyle,
       ...habitScheduleInput(schedule),
     };
 
@@ -497,6 +546,19 @@ export function HabitForm({
       </div>
 
       <div className="flex flex-col gap-2">
+        <Label>Card look</Label>
+        <HabitCardCoverStylePicker value={coverStyle} onChange={setCoverStyle} />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label>Illustration</Label>
+        <p className="text-xs text-muted-foreground">
+          Used for corner art, cover photos, or the hero object.
+        </p>
+        <HabitCardArtPicker value={cardArtKey} onChange={setCardArtKey} />
+      </div>
+
+      <div className="flex flex-col gap-2">
         <Label>Color</Label>
         <div className="color-row">
           {COLORS.map((c) => (
@@ -520,7 +582,16 @@ export function HabitForm({
             Cancel
           </Button>
           <Button type="submit" disabled={pending}>
-            {needsHistoryOnboarding ? "Continue" : "Add habit"}
+            {pending ? (
+              <>
+                <Spinner className="size-4" aria-hidden />
+                Saving…
+              </>
+            ) : needsHistoryOnboarding ? (
+              "Continue"
+            ) : (
+              "Add habit"
+            )}
           </Button>
         </div>
       ) : hideSubmit ? null : (

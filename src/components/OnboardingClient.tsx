@@ -19,7 +19,7 @@ export function OnboardingClient() {
   }
 
   return (
-    <div className="panel max-w-lg space-y-6">
+    <div className="panel glass-panel max-w-lg space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Welcome to Habitat</h1>
         <p className="mt-2 text-sm text-muted-foreground">

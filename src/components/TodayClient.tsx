@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useOptimistic, useState } from "react";
+import { useEffect, useMemo, useOptimistic, useState } from "react";
+import { LayoutGroup, motion } from "motion/react";
 import {
   BarChart3,
   ChevronLeft,
@@ -14,7 +15,7 @@ import {
 } from "lucide-react";
 import type { TodayDashboard } from "@/app/actions/today";
 import { AddHabitDialog } from "@/components/AddHabitDialog";
-import { QueryLoadingOverlay } from "@/components/api/QueryLoading";
+import { TodayPageSkeleton } from "@/components/api/QueryLoading";
 import { useSetHabitLogMutation } from "@/hooks/api/use-mutations";
 import { outcomeFromLogStatus } from "@/lib/calendar-optimistic";
 import { useTodayQuery } from "@/hooks/api/use-today";
@@ -34,8 +35,9 @@ import { addDays, LOCALE, parseDateKey, todayKey } from "@/lib/dates";
 import {
   formatHabitSubtitle,
   formatHabitTimeRail,
+  isTodayLogComplete,
   numericProgress,
-  sortTodayHabits,
+  orderTodayHabitList,
   streakValueLabel,
 } from "@/lib/today-display";
 import type { HabitLog, TodayHabitItem } from "@/lib/types";
@@ -50,13 +52,12 @@ type TodayClientProps = {
 };
 
 function isLoggedOk(log: HabitLog | null): boolean {
-  return Boolean(
-    log &&
-      log.status !== "missed" &&
-      log.status !== "lapse" &&
-      log.status !== "skipped",
-  );
+  return isTodayLogComplete(log);
 }
+
+const todayHabitLayoutTransition = {
+  layout: { type: "spring" as const, stiffness: 420, damping: 34 },
+};
 
 function TodayDateNav({ dateKey }: { dateKey: string }) {
   const router = useRouter();
@@ -109,10 +110,12 @@ function TodayHabitRow({
   dateKey,
   habit,
   log,
+  onLogChange,
 }: {
   dateKey: string;
   habit: TodayHabitItem["habit"];
   log: HabitLog | null;
+  onLogChange: (habitId: string, log: HabitLog | null) => void;
 }) {
   const setLogMutation = useSetHabitLogMutation();
   const [optimisticLog, setOptimisticLog] = useOptimistic(log);
@@ -131,21 +134,21 @@ function TodayHabitRow({
         : done
           ? null
           : "maintained";
-    setOptimisticLog(
-      nextStatus
-        ? {
-            id: optimisticLog?.id ?? "opt",
-            habit_id: habit.id,
-            log_date: dateKey,
-            status: nextStatus as HabitLog["status"],
-            note: null,
-            numeric_value: optimisticLog?.numeric_value ?? null,
-            completion_level: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }
-        : null,
-    );
+    const nextLog = nextStatus
+      ? {
+          id: optimisticLog?.id ?? "opt",
+          habit_id: habit.id,
+          log_date: dateKey,
+          status: nextStatus as HabitLog["status"],
+          note: null,
+          numeric_value: optimisticLog?.numeric_value ?? null,
+          completion_level: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+      : null;
+    setOptimisticLog(nextLog);
+    onLogChange(habit.id, nextLog);
     setLogMutation.mutate({
       habitId: habit.id,
       dateKey,
@@ -160,12 +163,15 @@ function TodayHabitRow({
   }
 
   return (
-    <li
+    <motion.li
+      layout
+      transition={todayHabitLayoutTransition}
       className={cn("today-habit-row", done && "done")}
       style={{ ["--habit" as string]: habit.color }}
     >
       <AnimatedCheck
         checked={done}
+        pending={setLogMutation.isPending}
         onToggle={toggle}
         label={done ? `Undo ${habit.name}` : `Complete ${habit.name}`}
       />
@@ -199,7 +205,7 @@ function TodayHabitRow({
       >
         <MoreVertical className="size-4" aria-hidden />
       </Link>
-    </li>
+    </motion.li>
   );
 }
 
@@ -211,13 +217,11 @@ export function TodayClient({
   dashboard: initialDashboard,
 }: TodayClientProps) {
   const [addOpen, setAddOpen] = useState(false);
+  const [logOverrides, setLogOverrides] = useState<
+    Record<string, HabitLog | null>
+  >({});
 
-  const {
-    data,
-    isFetching,
-    isLoading,
-    recoveryHint,
-  } = useTodayQuery(dateKey, {
+  const { data, isLoading, recoveryHint } = useTodayQuery(dateKey, {
     initialData: {
       items: initialItems,
       weekAdherence: _weekAdherence,
@@ -230,7 +234,27 @@ export function TodayClient({
   const dashboard = data?.dashboard ?? initialDashboard;
   const hint = recoveryHint ?? initialRecoveryHint;
 
-  const scheduled = sortTodayHabits(items.filter((i) => i.scheduled));
+  useEffect(() => {
+    setLogOverrides({});
+  }, [dateKey, items]);
+
+  function resolveLog(item: TodayHabitItem): HabitLog | null {
+    if (item.habit.id in logOverrides) {
+      return logOverrides[item.habit.id];
+    }
+    return item.log;
+  }
+
+  function onLogChange(habitId: string, log: HabitLog | null) {
+    setLogOverrides((prev) => ({ ...prev, [habitId]: log }));
+  }
+
+  const scheduled = useMemo(() => {
+    const withLogs = items
+      .filter((i) => i.scheduled)
+      .map((item) => ({ ...item, log: resolveLog(item) }));
+    return orderTodayHabitList(withLogs);
+  }, [items, logOverrides]);
   const doneCount = scheduled.filter((i) => isLoggedOk(i.log)).length;
   const progressPct =
     scheduled.length === 0
@@ -239,12 +263,16 @@ export function TodayClient({
 
   const ringValue = scheduled.length === 0 ? null : progressPct;
 
+  if (isLoading && !data) {
+    return (
+      <AnimatedPage className="today-page">
+        <TodayPageSkeleton />
+      </AnimatedPage>
+    );
+  }
+
   return (
-    <AnimatedPage className="today-page relative">
-      <QueryLoadingOverlay
-        show={isFetching && !isLoading}
-        label="Updating today…"
-      />
+    <AnimatedPage className="today-page">
       <header className="today-hero">
         <div className="today-hero-copy">
           <h1>{dashboard.greeting}</h1>
@@ -350,9 +378,17 @@ export function TodayClient({
           </p>
         ) : (
           <ul className="today-habit-list">
-            {scheduled.map(({ habit, log }) => (
-              <TodayHabitRow key={habit.id} dateKey={dateKey} habit={habit} log={log} />
-            ))}
+            <LayoutGroup id="today-habits">
+              {scheduled.map(({ habit, log }) => (
+                <TodayHabitRow
+                  key={habit.id}
+                  dateKey={dateKey}
+                  habit={habit}
+                  log={log}
+                  onLogChange={onLogChange}
+                />
+              ))}
+            </LayoutGroup>
           </ul>
         )}
       </section>

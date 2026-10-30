@@ -6,6 +6,15 @@ import { prisma } from "@/lib/db";
 import { eachDayKey, todayKey } from "@/lib/dates";
 import { isHabitScheduledOn } from "@/lib/domain/schedule";
 import { dbDate, toHabit, toHabitLog, toHabitWithLogs } from "@/lib/serialize";
+import {
+  DEFAULT_HABIT_CARD_ART_KEY,
+  isHabitCardArtKey,
+} from "@/lib/content/habit-card-art";
+import {
+  DEFAULT_HABIT_CARD_COVER_STYLE,
+  isHabitCardCoverStyle,
+} from "@/lib/content/habit-card-cover";
+import type { ActionResult } from "@/lib/api/types";
 import type {
   Habit,
   HabitBehaviorType,
@@ -15,8 +24,6 @@ import type {
   HabitWithLogs,
 } from "@/lib/types";
 
-import type { ActionResult } from "@/lib/api/types";
-
 export type { ActionResult };
 
 async function guard() {
@@ -25,6 +32,18 @@ async function guard() {
 
 function legacyKind(behavior: HabitBehaviorType): "build" | "quit" {
   return behavior === "build" ? "build" : "quit";
+}
+
+function cardArtKeyFromInput(input: HabitInput): string {
+  const key = input.card_art_key?.trim();
+  if (key && isHabitCardArtKey(key)) return key;
+  return DEFAULT_HABIT_CARD_ART_KEY;
+}
+
+function cardCoverStyleFromInput(input: HabitInput): string {
+  const style = input.card_cover_style?.trim();
+  if (style && isHabitCardCoverStyle(style)) return style;
+  return DEFAULT_HABIT_CARD_COVER_STYLE;
 }
 
 function habitData(input: HabitInput) {
@@ -39,6 +58,8 @@ function habitData(input: HabitInput) {
     start_date: dbDate(input.start_date),
     color: input.color,
     icon: input.icon?.trim() || null,
+    card_art_key: cardArtKeyFromInput(input),
+    card_cover_style: cardCoverStyleFromInput(input),
     status: input.status ?? "active",
     frequency: input.frequency ?? "daily",
     schedule_kind: scheduleKind,

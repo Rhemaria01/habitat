@@ -1,4 +1,4 @@
-import type { Habit, HabitLog, TimeWindow } from "@/lib/types";
+import type { Habit, HabitLog, TimeWindow, TodayHabitItem } from "@/lib/types";
 
 const WINDOW_ORDER: Record<NonNullable<TimeWindow>, number> = {
   morning: 0,
@@ -76,6 +76,30 @@ export function sortTodayHabits<T extends { habit: Habit }>(items: T[]): T[] {
     const tb = b.habit.cue_time ?? b.habit.planned_time ?? "";
     return ta.localeCompare(tb);
   });
+}
+
+export function isTodayLogComplete(log: HabitLog | null): boolean {
+  return Boolean(
+    log &&
+      log.status !== "missed" &&
+      log.status !== "lapse" &&
+      log.status !== "skipped",
+  );
+}
+
+/** Pending habits first (time order), completed habits last — stable within each group. */
+export function orderTodayHabitList(
+  items: TodayHabitItem[],
+  isComplete: (log: HabitLog | null) => boolean = isTodayLogComplete,
+): TodayHabitItem[] {
+  const tagged = sortTodayHabits(items).map((item, index) => ({ item, index }));
+  tagged.sort((a, b) => {
+    const aDone = isComplete(a.item.log);
+    const bDone = isComplete(b.item.log);
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    return a.index - b.index;
+  });
+  return tagged.map(({ item }) => item);
 }
 
 export function numericProgress(habit: Habit, log: HabitLog | null): {

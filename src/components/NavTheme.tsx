@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Moon, Sun } from "lucide-react";
-import { THEME_COOKIE } from "@/lib/theme";
+import { applyThemeMode } from "@/lib/theme-prefs";
 
 export function ThemeToggle() {
   const router = useRouter();
@@ -10,8 +10,7 @@ export function ThemeToggle() {
   function toggle() {
     const isLight = document.documentElement.dataset.theme === "light";
     const next = isLight ? "dark" : "light";
-    document.documentElement.dataset.theme = next;
-    document.cookie = `${THEME_COOKIE}=${next}; path=/; max-age=31536000; SameSite=Lax`;
+    applyThemeMode(next);
     router.refresh();
   }
 

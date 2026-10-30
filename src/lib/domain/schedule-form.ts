@@ -152,6 +152,24 @@ export function habitScheduleInput(
   }
 }
 
+export function schedulePreviewLabel(schedule: ScheduleFormState): string {
+  if (schedule.mode === "daily") return "Every day";
+  if (schedule.mode === "weekly") {
+    if (schedule.weeklyVariant === "once") {
+      return `Weekly · ${WEEKDAY_LABELS[schedule.weeklyDay] ?? "Mon"}`;
+    }
+    return `${schedule.timesPerWeek}× per week`;
+  }
+  if (schedule.customVariant === "interval") {
+    return `Every ${schedule.intervalDays} days`;
+  }
+  if (schedule.weekdays.length === 0) return "Custom days";
+  return [...schedule.weekdays]
+    .sort((a, b) => a - b)
+    .map((d) => WEEKDAY_LABELS[d] ?? "?")
+    .join(", ");
+}
+
 export function validateScheduleForm(state: ScheduleFormState): string | null {
   if (state.mode === "weekly" && state.weeklyVariant === "times") {
     if (state.timesPerWeek < 1 || state.timesPerWeek > 7) {

@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
-import { THEME_COOKIE, normalizeTheme } from "@/lib/theme";
+import { ACCENT_COOKIE, THEME_COOKIE, normalizeTheme, resolveThemeForHtml } from "@/lib/theme";
+import type { AccentId } from "@/lib/settings-preferences";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -52,12 +53,24 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const jar = await cookies();
-  const theme = normalizeTheme(jar.get(THEME_COOKIE)?.value);
+  const themeMode = normalizeTheme(jar.get(THEME_COOKIE)?.value);
+  const theme = resolveThemeForHtml(themeMode);
+  const accentRaw = jar.get(ACCENT_COOKIE)?.value;
+  const accent =
+    accentRaw === "green" ||
+    accentRaw === "purple" ||
+    accentRaw === "blue" ||
+    accentRaw === "orange" ||
+    accentRaw === "pink" ||
+    accentRaw === "teal"
+      ? accentRaw
+      : ("green" satisfies AccentId);
 
   return (
     <html
       lang="en"
       data-theme={theme}
+      data-accent={accent}
       className={cn("h-full", geist.variable, geistMono.variable, "font-sans")}
     >
       <body className="flex min-h-dvh flex-col antialiased">
@@ -76,7 +89,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html:
-              "try{var m=document.cookie.match(/(?:^|; )habitat-theme=(dark|light)/);if(m)document.documentElement.dataset.theme=m[1];}catch(e){}",
+              "try{var m=document.cookie.match(/(?:^|; )habitat-theme=(dark|light|system)/);var mode=m?m[1]:'dark';if(mode==='system'){var light=window.matchMedia('(prefers-color-scheme: light)').matches;document.documentElement.dataset.theme=light?'light':'dark';}else{document.documentElement.dataset.theme=mode;}var a=document.cookie.match(/(?:^|; )habitat-accent=(green|purple|blue|orange|pink|teal)/);if(a)document.documentElement.dataset.accent=a[1];}catch(e){}",
           }}
         />
         <Providers>{children}</Providers>

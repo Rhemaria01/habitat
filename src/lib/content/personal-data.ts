@@ -24,6 +24,8 @@ export type PersonalHabitSeed = {
   category: string;
   color: string;
   icon?: string | null;
+  /** Key from `HABIT_CARD_ART_KEYS` in habit-card-art.ts */
+  card_art_key?: string | null;
   schedule_kind: "daily" | "weekdays" | "custom" | "days_per_week" | "every_n_days";
   schedule_weekdays?: number[];
   schedule_custom_days?: number[];
@@ -53,6 +55,7 @@ export const PERSONAL_HABITS: PersonalHabitSeed[] = [
     category: "Health",
     color: "#FF7A8A",
     icon: "wind",
+    card_art_key: "leaf",
     schedule_kind: "daily",
     frequency: "daily",
     start_date: "2026-04-27",
@@ -67,6 +70,7 @@ export const PERSONAL_HABITS: PersonalHabitSeed[] = [
     category: "Morning & fitness",
     color: "#4FD1A5",
     icon: "dumbbell",
+    card_art_key: "dumbbell",
     schedule_kind: "custom",
     schedule_custom_days: [1, 2, 3, 4, 5],
     frequency: "daily",
@@ -84,6 +88,7 @@ export const PERSONAL_HABITS: PersonalHabitSeed[] = [
     category: "Morning & fitness",
     color: "#6FB3E8",
     icon: "footprints",
+    card_art_key: "footprints",
     schedule_kind: "daily",
     frequency: "daily",
     tracking_type: "numeric",
@@ -99,6 +104,7 @@ export const PERSONAL_HABITS: PersonalHabitSeed[] = [
     category: "Daily discipline",
     color: "#F4A5C0",
     icon: "droplets",
+    card_art_key: "bottle",
     schedule_kind: "daily",
     frequency: "daily",
     time_window: "evening",
@@ -113,6 +119,7 @@ export const PERSONAL_HABITS: PersonalHabitSeed[] = [
     category: "Personal growth",
     color: "#A78BFA",
     icon: "pen",
+    card_art_key: "pen",
     schedule_kind: "daily",
     frequency: "daily",
     time_window: "evening",
@@ -127,6 +134,7 @@ export const PERSONAL_HABITS: PersonalHabitSeed[] = [
     category: "Personal growth",
     color: "#C084FC",
     icon: "book",
+    card_art_key: "book",
     schedule_kind: "daily",
     frequency: "daily",
     time_window: "evening",
@@ -141,6 +149,7 @@ export const PERSONAL_HABITS: PersonalHabitSeed[] = [
     category: "Personal growth",
     color: "#A78BFA",
     icon: "sparkles",
+    card_art_key: "candle",
     schedule_kind: "daily",
     frequency: "daily",
     time_window: "evening",

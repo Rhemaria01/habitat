@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   archiveHabit,
@@ -11,7 +12,7 @@ import {
   toggleHabitDay,
   updateHabit,
 } from "@/app/actions/habits";
-import { exportUserData, updateProfile } from "@/app/actions/settings";
+import { exportUserData, updateProfile, importUserData, clearUserData } from "@/app/actions/settings";
 import { completeOnboarding } from "@/app/actions/onboarding";
 import { setHabitLog } from "@/app/actions/today";
 import { queryKeys } from "@/lib/api/query-keys";
@@ -74,6 +75,37 @@ export function useSeedHistoryMutation() {
 
 export function useExportUserDataMutation() {
   return useActionMutation(async () => exportUserData(), { errorToast: true });
+}
+
+export function useImportUserDataMutation() {
+  const queryClient = useQueryClient();
+  return useActionMutation(
+    (rawText: string) => importUserData(rawText),
+    {
+      errorToast: true,
+      successToast: "Import complete",
+      invalidateHabits: true,
+      onSuccess: (data) => {
+        if (data?.warnings?.length) {
+          data.warnings.forEach((w) => toast.message(w));
+        }
+        void queryClient.invalidateQueries({ queryKey: queryKeys.habits.all });
+      },
+    },
+  );
+}
+
+export function useClearUserDataMutation() {
+  const queryClient = useQueryClient();
+  return useActionMutation(async () => clearUserData(), {
+    errorToast: true,
+    successToast: "All habit data deleted",
+    invalidateHabits: true,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.habits.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.profile.all });
+    },
+  });
 }
 
 export function useDeleteHabitMutation(habitId: string) {
@@ -177,11 +209,11 @@ export function useSetHabitLogMutation() {
   );
 }
 
-export function useUpdateProfileMutation() {
+export function useUpdateProfileMutation(options?: { successToast?: boolean }) {
   const queryClient = useQueryClient();
   return useActionMutation(updateProfile, {
     errorToast: true,
-    successToast: "Saved",
+    ...(options?.successToast ? { successToast: "Saved" } : {}),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.profile.all });
     },

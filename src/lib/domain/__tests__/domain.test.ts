@@ -28,6 +28,8 @@ const baseHabit = (over: Partial<Habit> = {}): Habit => ({
   estimated_duration_minutes: null,
   identity_proof: null,
   source_key: null,
+  card_art_key: null,
+  card_cover_style: null,
   cue_type: null,
   cue_time: null,
   cue_place: null,

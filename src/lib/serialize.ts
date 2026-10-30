@@ -62,6 +62,8 @@ export function toHabit(row: HabitModel): Habit {
     estimated_duration_minutes: row.estimated_duration_minutes,
     identity_proof: row.identity_proof,
     source_key: row.source_key,
+    card_art_key: row.card_art_key ?? null,
+    card_cover_style: row.card_cover_style ?? null,
     cue_type: row.cue_type,
     cue_time: row.cue_time,
     cue_place: row.cue_place,

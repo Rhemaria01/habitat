@@ -24,7 +24,7 @@ import {
   CalendarGridSkeleton,
   CalendarSideSkeleton,
   QueryErrorBanner,
-  QueryLoadingOverlay,
+  calendarMonthViewPending,
 } from "@/components/api/QueryLoading";
 import { AddHabitDialog } from "@/components/AddHabitDialog";
 import { CalendarDayBackfill } from "@/components/CalendarDayBackfill";
@@ -157,7 +157,6 @@ export function CalendarClient({ initial, initialDay }: CalendarClientProps) {
   const {
     data: dayDetail,
     isLoading: dayLoading,
-    isFetching: dayFetching,
     isError: dayError,
     error: dayErr,
   } = useCalendarDayQuery(selectedKey, { initialData: initialDay });
@@ -206,10 +205,11 @@ export function CalendarClient({ initial, initialDay }: CalendarClientProps) {
   }
 
   const listDays = cells.filter((c) => c.dateKey);
-  const showMonthSkeleton = monthLoading && !month.days.length;
-  const showMonthOverlay = monthFetching && !monthLoading;
-  const showDaySkeleton = dayLoading && !dayDetail;
-  const showDayOverlay = dayFetching && !dayLoading && Boolean(dayDetail);
+  const showMonthSkeleton =
+    (monthLoading && !month.days.length) ||
+    calendarMonthViewPending(month, year, monthIndex, monthFetching);
+  const showDaySkeleton =
+    dayLoading || !dayDetail || dayDetail.dateKey !== selectedKey;
 
   return (
     <CalendarFlyProvider>
@@ -284,7 +284,6 @@ export function CalendarClient({ initial, initialDay }: CalendarClientProps) {
           )}
         >
           {view === "month" ? <CalendarScenicBackdrop variant="fill" /> : null}
-          <QueryLoadingOverlay show={showMonthOverlay} label="Updating month…" />
           {monthError ? (
             <QueryErrorBanner error={monthErr} className="p-4" />
           ) : null}
@@ -417,7 +416,6 @@ export function CalendarClient({ initial, initialDay }: CalendarClientProps) {
 
         <aside className="calendar-v2-side glass-panel calendar-scenic-panel relative">
           <CalendarScenicBackdrop />
-          <QueryLoadingOverlay show={showDayOverlay} label="Updating day…" />
           {dayError ? (
             <QueryErrorBanner error={dayErr} className="p-4" />
           ) : null}

@@ -59,6 +59,7 @@ async function main() {
         start_date: new Date(`${habitStart}T00:00:00.000Z`),
         color: h.color,
         icon: h.icon ?? null,
+        card_art_key: h.card_art_key ?? null,
         frequency: h.frequency,
         schedule_kind: h.schedule_kind,
         schedule_weekdays: h.schedule_weekdays ?? [],

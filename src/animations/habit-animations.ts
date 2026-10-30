@@ -52,6 +52,16 @@ export function playHabitCompleteAnimation(targets: HabitCompleteTargets): void 
     80,
   );
 
+  tl.add(
+    targets.row,
+    {
+      scale: [1, 0.992, 1],
+      duration: motion.duration.expressive,
+      ease: motion.easing.smooth,
+    },
+    120,
+  );
+
   emitHabitCompleted();
 }
 

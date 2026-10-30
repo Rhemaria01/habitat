@@ -92,6 +92,8 @@ model Habit {
   tracking_type              String              @default("binary")
   tracking_unit              String?
   is_priority                Boolean             @default(false)
+  card_art_key               String?
+  card_cover_style           String?
   logs                       HabitLog[]
   anchor_habit               Habit?              @relation("HabitAnchor", fields: [anchor_habit_id], references: [id], onDelete: SetNull)
   anchored_by                Habit[]             @relation("HabitAnchor")

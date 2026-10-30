@@ -11,6 +11,8 @@ import { addDays, todayKey } from "@/lib/dates";
 import { formatScheduleLabel } from "@/lib/domain/schedule";
 import { computeStreakStats } from "@/lib/streaks";
 import { AnimatedHabitCard } from "@/components/animated/AnimatedHabitCard";
+import { HabitCardCornerArt } from "@/components/HabitCardCornerArt";
+import { resolveHabitCardArtSrc } from "@/lib/content/habit-card-art";
 import type { HabitBehaviorType, HabitLog, HabitWithLogs } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -282,6 +284,7 @@ function PlainHabitCard({
         )}
         style={{ ["--habit" as string]: habit.color }}
       >
+        <HabitCardCornerArt src={resolveHabitCardArtSrc(habit)} />
         <CardContent
           habit={habit}
           logs={overlay ? habit.logs : logs}
@@ -329,6 +332,7 @@ function SortableHabitCard({
           opacity: isDragging ? 0 : undefined,
         }}
       >
+        <HabitCardCornerArt src={resolveHabitCardArtSrc(habit)} />
         <CardContent
           habit={habit}
           logs={logs}

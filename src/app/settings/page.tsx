@@ -7,8 +7,13 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const profile = await getProfile();
   return (
-    <AppShell>
-      <h1 className="mb-4 text-2xl font-semibold">Settings</h1>
+    <AppShell wide>
+      <header className="page-head mb-2 animate-fade-up">
+        <h1>Settings</h1>
+        <p className="page-sub">
+          Customize your experience, data and preferences.
+        </p>
+      </header>
       <SettingsClient profile={profile} />
     </AppShell>
   );

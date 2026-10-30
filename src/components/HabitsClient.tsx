@@ -23,9 +23,8 @@ import {
 } from "@dnd-kit/sortable";
 import { AddHabitDialog } from "@/components/AddHabitDialog";
 import {
-  HabitsGridSkeleton,
+  HabitsPageShellSkeleton,
   QueryErrorBanner,
-  QueryLoadingOverlay,
 } from "@/components/api/QueryLoading";
 import { HabitCard } from "@/components/HabitCard";
 import { useHabitsQuery } from "@/hooks/api/use-habits";
@@ -66,7 +65,6 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
   const {
     data: habits = initialHabits,
     isLoading,
-    isFetching,
     isError,
     error,
   } = useHabitsQuery({ initialData: initialHabits });
@@ -171,13 +169,13 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
   );
 
   return (
-    <div className="habits-page relative">
-      <QueryLoadingOverlay
-        show={isFetching && !isLoading}
-        label="Refreshing habits…"
-      />
+    <div className="habits-page">
       {isError ? <QueryErrorBanner error={error} className="mb-3" /> : null}
 
+      {isLoading && habits.length === 0 ? (
+        <HabitsPageShellSkeleton />
+      ) : (
+        <>
       <header className="habits-page-head animate-fade-up">
         <div className="habits-page-title">
           <h1>Habits</h1>
@@ -229,9 +227,7 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
         </div>
       </header>
 
-      {isLoading && habits.length === 0 ? (
-        <HabitsGridSkeleton />
-      ) : habits.length === 0 ? (
+      {habits.length === 0 ? (
         <Empty className="habits-empty animate-fade-up">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -290,6 +286,8 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
       )}
 
       <AddHabitDialog open={addOpen} onOpenChange={setAddOpen} />
+        </>
+      )}
     </div>
   );
 }

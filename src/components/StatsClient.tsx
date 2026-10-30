@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { StatsDashboard } from "@/app/actions/stats";
 import {
   QueryErrorBanner,
-  QueryLoadingOverlay,
+  StatsPageSkeleton,
 } from "@/components/api/QueryLoading";
 import { StatsHabitTable } from "@/components/stats/StatsHabitTable";
 import { StatsInsightsSidebar } from "@/components/stats/StatsInsightsSidebar";
@@ -38,18 +38,21 @@ export function StatsClient({
 
   const params: StatsQueryParams = { year, month, range };
 
-  const {
-    data = initialData,
-    isFetching,
-    isLoading,
-    isError,
-    error,
-  } = useStatsDashboardQuery(params, {
-    initialData:
-      year === initialYear && month === initialMonth && range === initialRange
-        ? initialData
-        : undefined,
-  });
+  const { data, isFetching, isLoading, isError, error } =
+    useStatsDashboardQuery(params, {
+      initialData:
+        year === initialYear && month === initialMonth && range === initialRange
+          ? initialData
+          : undefined,
+    });
+
+  const dataMatches =
+    Boolean(data) &&
+    data!.year === year &&
+    data!.month === month &&
+    data!.range === range;
+  const showStatsSkeleton = isLoading || (isFetching && !dataMatches);
+  const dashboard = dataMatches ? data! : initialData;
 
   function onMonthChange(y: number, m: number) {
     setYear(y);
@@ -57,11 +60,7 @@ export function StatsClient({
   }
 
   return (
-    <div className="stats-v2 relative">
-      <QueryLoadingOverlay
-        show={isFetching && !isLoading}
-        label="Refreshing stats…"
-      />
+    <div className="stats-v2">
       {isError ? <QueryErrorBanner error={error} className="mb-3" /> : null}
 
       <StatsToolbar
@@ -72,29 +71,35 @@ export function StatsClient({
         onRangeChange={setRange}
       />
 
-      <StatsKpiRow data={data} />
+      {showStatsSkeleton ? (
+        <StatsPageSkeleton />
+      ) : (
+        <>
+          <StatsKpiRow data={dashboard} />
 
-      <div className="stats-v2-grid">
-        <div className="stats-v2-main">
-          <StatsMonthHeatmap
-            days={data.monthHeatmapDays}
-            daysInMonth={data.daysInMonth}
-            monthLabel={data.monthLabel}
-          />
-          <div className="stats-v2-charts">
-            <StatsTrendChart points={data.trendSeries} />
-            <StatsLogDonut breakdown={data.logBreakdown} />
+          <div className="stats-v2-grid">
+            <div className="stats-v2-main">
+              <StatsMonthHeatmap
+                days={dashboard.monthHeatmapDays}
+                daysInMonth={dashboard.daysInMonth}
+                monthLabel={dashboard.monthLabel}
+              />
+              <div className="stats-v2-charts">
+                <StatsTrendChart points={dashboard.trendSeries} />
+                <StatsLogDonut breakdown={dashboard.logBreakdown} />
+              </div>
+              <StatsHabitTable rows={dashboard.habitRows} />
+            </div>
+            <StatsInsightsSidebar
+              insights={dashboard.insights}
+              behaviorCounts={dashboard.behaviorCounts}
+              breakdown={dashboard.logBreakdown}
+              deltaPercent={dashboard.deltaPercent}
+              avgAdherence={dashboard.avgAdherence}
+            />
           </div>
-          <StatsHabitTable rows={data.habitRows} />
-        </div>
-        <StatsInsightsSidebar
-          insights={data.insights}
-          behaviorCounts={data.behaviorCounts}
-          breakdown={data.logBreakdown}
-          deltaPercent={data.deltaPercent}
-          avgAdherence={data.avgAdherence}
-        />
-      </div>
+        </>
+      )}
     </div>
   );
 }

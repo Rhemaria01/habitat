@@ -1,20 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Bell,
+  Check,
+  Info,
+  LogOut,
+  Monitor,
+  Moon,
+  Palette,
+  Settings2,
+  Sun,
+  Database,
+} from "lucide-react";
+import { logoutAction } from "@/app/actions/auth";
 import type { Profile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   QueryErrorBanner,
-  QueryLoadingOverlay,
+  SettingsFormSkeleton,
 } from "@/components/api/QueryLoading";
 import { useProfileQuery } from "@/hooks/api/use-profile";
 import {
+  useClearUserDataMutation,
   useExportUserDataMutation,
+  useImportUserDataMutation,
   useUpdateProfileMutation,
 } from "@/hooks/api/use-mutations";
+import { SettingsCard } from "@/components/settings/SettingsCard";
+import {
+  ACCENT_SWATCHES,
+  REMINDER_TIME_OPTIONS,
+  preferencesFromProfile,
+  type AccentId,
+  type SettingsPreferences,
+  type ThemeMode,
+} from "@/lib/settings-preferences";
+import {
+  applyAccent,
+  applyThemeMode,
+  formatTimezoneLabel,
+  listTimezones,
+} from "@/lib/theme-prefs";
+import { cn } from "@/lib/utils";
+
+const APP_VERSION = "0.1.0";
+const IDENTITY_MAX = 200;
 
 type SettingsClientProps = {
   profile: Profile;
@@ -23,7 +76,6 @@ type SettingsClientProps = {
 export function SettingsClient({ profile: initial }: SettingsClientProps) {
   const {
     data: profile = initial,
-    isFetching,
     isLoading,
     isError,
     error,
@@ -31,28 +83,83 @@ export function SettingsClient({ profile: initial }: SettingsClientProps) {
 
   const updateMutation = useUpdateProfileMutation();
   const exportMutation = useExportUserDataMutation();
+  const importMutation = useImportUserDataMutation();
+  const clearMutation = useClearUserDataMutation();
 
-  const [timezone, setTimezone] = useState(profile.timezone);
-  const [weekStart, setWeekStart] = useState(String(profile.week_start));
-  const [identityNote, setIdentityNote] = useState(profile.identity_note ?? "");
+  const savedPrefs = useMemo(
+    () => preferencesFromProfile(profile.onboarding ?? {}),
+    [profile.onboarding],
+  );
 
-  const pending = updateMutation.isPending || exportMutation.isPending;
+  const [identityDraft, setIdentityDraft] = useState<string | null>(null);
+  const identityNote = identityDraft ?? profile.identity_note ?? "";
 
-  function save() {
-    updateMutation.mutate(
-      {
-        timezone: timezone.trim() || "Asia/Kolkata",
-        week_start: Number(weekStart),
-        identity_note: identityNote.trim() || null,
-      },
-      {
-        onSuccess: (data) => {
-          setTimezone(data.timezone);
-          setWeekStart(String(data.week_start));
-          setIdentityNote(data.identity_note ?? "");
-        },
-      },
-    );
+  const [prefOverrides, setPrefOverrides] = useState<
+    Partial<SettingsPreferences>
+  >({});
+  const prefs: SettingsPreferences = { ...savedPrefs, ...prefOverrides };
+
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
+    preferencesFromProfile(initial.onboarding ?? {}).theme_mode,
+  );
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prefsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const timezones = useMemo(() => listTimezones(), []);
+  const pending =
+    updateMutation.isPending ||
+    exportMutation.isPending ||
+    importMutation.isPending ||
+    clearMutation.isPending;
+
+  useEffect(() => {
+    applyAccent(savedPrefs.accent);
+  }, [savedPrefs.accent]);
+
+  useEffect(() => {
+    applyThemeMode(themeMode);
+  }, [themeMode]);
+
+  const scheduleProfileSave = useCallback(
+    (patch: {
+      timezone?: string;
+      week_start?: number;
+      identity_note?: string | null;
+    }) => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        updateMutation.mutate(patch);
+      }, 400);
+    },
+    [updateMutation],
+  );
+
+  const schedulePrefsSave = useCallback(
+    (patch: Partial<SettingsPreferences>) => {
+      if (prefsTimer.current) clearTimeout(prefsTimer.current);
+      prefsTimer.current = setTimeout(() => {
+        updateMutation.mutate({ preferences: patch });
+      }, 400);
+    },
+    [updateMutation],
+  );
+
+  function patchPrefs(patch: Partial<SettingsPreferences>) {
+    setPrefOverrides((prev) => ({ ...prev, ...patch }));
+    schedulePrefsSave(patch);
+  }
+
+  function onThemePick(mode: ThemeMode) {
+    setThemeMode(mode);
+    applyThemeMode(mode);
+    patchPrefs({ theme_mode: mode });
+  }
+
+  function onAccentPick(accent: AccentId) {
+    applyAccent(accent);
+    patchPrefs({ accent });
   }
 
   function exportData() {
@@ -69,49 +176,305 @@ export function SettingsClient({ profile: initial }: SettingsClientProps) {
     });
   }
 
+  function onImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? "");
+      importMutation.mutate(text);
+    };
+    reader.readAsText(file);
+  }
+
   return (
-    <div className="relative space-y-6 max-w-lg">
-      <QueryLoadingOverlay show={isFetching && !isLoading} label="Loading profile…" />
+    <div className="settings-page relative">
+      {isLoading ? <SettingsFormSkeleton /> : null}
       {isError ? <QueryErrorBanner error={error} /> : null}
-      <section className="panel space-y-3">
-        <h2>Preferences</h2>
-        <div>
-          <Label htmlFor="tz">Timezone</Label>
-          <Input id="tz" value={timezone} onChange={(e) => setTimezone(e.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor="ws">Week starts on (0=Sun … 6=Sat)</Label>
-          <Input id="ws" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor="id">Identity / values note (optional)</Label>
-          <Input id="id" value={identityNote} onChange={(e) => setIdentityNote(e.target.value)} />
-        </div>
-        <Button type="button" disabled={pending} onClick={save}>
-          {updateMutation.isPending ? "Saving…" : "Save"}
-        </Button>
-      </section>
-      <section className="panel space-y-3">
-        <h2>Data</h2>
-        <Button type="button" variant="outline" disabled={pending} onClick={exportData}>
-          {exportMutation.isPending ? "Exporting…" : "Export JSON"}
-        </Button>
-      </section>
-      <section className="panel space-y-2 text-sm text-muted-foreground">
-        <h2 className="text-foreground">About</h2>
-        <p>
-          UI motion components from{" "}
-          <a href="https://skiper-ui.com" className="underline" target="_blank" rel="noreferrer">
-            Skiper UI
-          </a>{" "}
-          (free tier attribution).
-        </p>
-        <p>
-          <Link href="/onboarding" className="underline">
-            Resume onboarding
-          </Link>
-        </p>
-      </section>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/json,.json"
+        className="sr-only"
+        onChange={onImportFile}
+      />
+
+      <div className={cn("settings-grid", isLoading && "sr-only")}>
+        <SettingsCard icon={Settings2} title="Preferences">
+          <div className="settings-field">
+            <Label className="settings-field-label" htmlFor="settings-tz">
+              Timezone
+            </Label>
+            <Select
+              value={profile.timezone}
+              onValueChange={(value) => {
+                scheduleProfileSave({ timezone: value });
+              }}
+            >
+              <SelectTrigger id="settings-tz" className="w-full">
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {timezones.map((tz) => (
+                  <SelectItem key={tz} value={tz}>
+                    {formatTimezoneLabel(tz)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="settings-field">
+            <span className="settings-field-label">Week starts on</span>
+            <ToggleGroup
+              type="single"
+              value={String(profile.week_start)}
+              onValueChange={(value) => {
+                if (!value) return;
+                scheduleProfileSave({ week_start: Number(value) });
+              }}
+              className="w-full"
+            >
+              <ToggleGroupItem value="0" className="flex-1">
+                Sunday
+              </ToggleGroupItem>
+              <ToggleGroupItem value="1" className="flex-1">
+                Monday
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+
+          <div className="settings-field">
+            <Label className="settings-field-label" htmlFor="settings-identity">
+              Identity / values note
+            </Label>
+            <div className="settings-textarea-wrap">
+              <Textarea
+                id="settings-identity"
+                value={identityNote}
+                maxLength={IDENTITY_MAX}
+                rows={3}
+                placeholder="Who you're becoming…"
+                onChange={(e) => {
+                  const next = e.target.value.slice(0, IDENTITY_MAX);
+                  setIdentityDraft(next);
+                }}
+                onBlur={() => {
+                  const trimmed = identityNote.trim() || null;
+                  scheduleProfileSave({ identity_note: trimmed });
+                  setIdentityDraft(null);
+                }}
+              />
+              <span className="settings-char-count">
+                {identityNote.length}/{IDENTITY_MAX}
+              </span>
+            </div>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard icon={Palette} title="Appearance">
+          <div className="settings-field">
+            <span className="settings-field-label">Theme</span>
+            <div className="settings-theme-grid">
+              {(
+                [
+                  { id: "light" as const, label: "Light", icon: Sun },
+                  { id: "dark" as const, label: "Dark", icon: Moon },
+                  { id: "system" as const, label: "System", icon: Monitor },
+                ] as const
+              ).map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={cn(
+                    "settings-theme-tile",
+                    themeMode === id && "active",
+                  )}
+                  onClick={() => onThemePick(id)}
+                >
+                  <Icon className="size-5" aria-hidden />
+                  <span>{label}</span>
+                  {themeMode === id ? (
+                    <Check className="size-3.5 text-primary" aria-hidden />
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="settings-field">
+            <span className="settings-field-label">Accent color</span>
+            <div className="settings-accent-row">
+              {ACCENT_SWATCHES.map((swatch) => (
+                <button
+                  key={swatch.id}
+                  type="button"
+                  className={cn(
+                    "settings-accent-swatch",
+                    prefs.accent === swatch.id && "active",
+                  )}
+                  style={{ backgroundColor: swatch.color }}
+                  aria-label={swatch.label}
+                  aria-pressed={prefs.accent === swatch.id}
+                  onClick={() => onAccentPick(swatch.id)}
+                >
+                  {prefs.accent === swatch.id ? (
+                    <Check className="size-3.5" aria-hidden />
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard icon={Database} title="Data">
+          <div className="settings-row">
+            <div className="settings-row-copy">
+              <div className="settings-row-label">Export data</div>
+              <p>Download all habits and logs as JSON.</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="settings-data-btn"
+              disabled={pending}
+              onClick={exportData}
+            >
+              {exportMutation.isPending ? "Exporting…" : "Export JSON"}
+            </Button>
+          </div>
+          <div className="settings-row">
+            <div className="settings-row-copy">
+              <div className="settings-row-label">Import data</div>
+              <p>Restore from a Habitat export file.</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="settings-data-btn"
+              disabled={pending}
+              onClick={() => fileRef.current?.click()}
+            >
+              {importMutation.isPending ? "Importing…" : "Import JSON"}
+            </Button>
+          </div>
+          <div className="settings-row">
+            <div className="settings-row-copy">
+              <div className="settings-row-label">Clear all data</div>
+              <p>Permanently delete all habits and logs.</p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="settings-data-btn text-destructive hover:text-destructive"
+                  disabled={pending}
+                >
+                  Delete data
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete all habit data?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This removes every habit and log. Your profile and settings
+                    stay. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-white hover:bg-destructive/90"
+                    onClick={() => clearMutation.mutate(undefined)}
+                  >
+                    Delete everything
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard icon={Bell} title="Reminders">
+          <div className="settings-row">
+            <div className="settings-row-copy">
+              <div className="settings-row-label">Daily reminder</div>
+              <p>Get a nudge to check in on your habits.</p>
+            </div>
+            <Switch
+              checked={prefs.daily_reminder}
+              onCheckedChange={(checked) =>
+                patchPrefs({ daily_reminder: checked })
+              }
+              aria-label="Daily reminder"
+            />
+          </div>
+          <div className="settings-field">
+            <Label className="settings-field-label" htmlFor="settings-reminder-time">
+              Reminder time
+            </Label>
+            <Select
+              value={prefs.reminder_time}
+              disabled={!prefs.daily_reminder}
+              onValueChange={(value) => patchPrefs({ reminder_time: value })}
+            >
+              <SelectTrigger id="settings-reminder-time" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {REMINDER_TIME_OPTIONS.map((time) => (
+                  <SelectItem key={time} value={time}>
+                    {time}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="settings-row">
+            <div className="settings-row-copy">
+              <div className="settings-row-label">Weekly summary</div>
+              <p>A recap of your week every Sunday.</p>
+            </div>
+            <Switch
+              checked={prefs.weekly_summary}
+              onCheckedChange={(checked) =>
+                patchPrefs({ weekly_summary: checked })
+              }
+              aria-label="Weekly summary"
+            />
+          </div>
+        </SettingsCard>
+
+        <SettingsCard icon={Info} title="About">
+          <p className="settings-about-version">Habitat v{APP_VERSION}</p>
+          <p className="settings-about-text">
+            UI motion components from{" "}
+            <a
+              href="https://skiper-ui.com"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Skiper UI
+            </a>{" "}
+            (free tier attribution).
+          </p>
+        </SettingsCard>
+
+        <SettingsCard icon={LogOut} title="Sign out">
+          <form action={logoutAction}>
+            <button type="submit" className="settings-signout-btn">
+              <LogOut className="size-4" aria-hidden />
+              Sign out
+            </button>
+          </form>
+        </SettingsCard>
+      </div>
     </div>
   );
 }

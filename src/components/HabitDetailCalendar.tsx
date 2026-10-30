@@ -7,7 +7,7 @@ import { animateCalendarCells } from "@/animations/calendar-animations";
 import {
   CalendarGridSkeleton,
   QueryErrorBanner,
-  QueryLoadingOverlay,
+  calendarMonthViewPending,
 } from "@/components/api/QueryLoading";
 import { CalendarDayBackfill } from "@/components/CalendarDayBackfill";
 import { CalendarScenicBackdrop } from "@/components/CalendarScenicBackdrop";
@@ -122,13 +122,13 @@ export function HabitDetailCalendar({ habitId, habit, initial }: HabitDetailCale
   }
 
   const listDays = cells.filter((c) => c.dateKey);
-  const showSkeleton = isLoading && !cells.length;
-  const showOverlay = isFetching && !isLoading;
+  const showSkeleton =
+    (isLoading && !cells.length) ||
+    calendarMonthViewPending(month, year, monthIndex, isFetching);
 
   return (
     <section className="habit-detail-calendar glass-panel calendar-scenic-panel relative">
       {view === "month" ? <CalendarScenicBackdrop variant="fill" /> : null}
-      <QueryLoadingOverlay show={showOverlay} label="Updating calendar…" />
       {isError ? <QueryErrorBanner error={error} className="px-4 pt-4" /> : null}
 
       <div className="habit-detail-cal-toolbar">
@@ -225,7 +225,7 @@ export function HabitDetailCalendar({ habitId, habit, initial }: HabitDetailCale
       ) : null}
 
       {view === "list" ? (
-        <ul className="cal-v2-list">
+        <ul className="cal-v2-list cal-v2-list-inset">
           {listDays.map((cell) => (
             <li key={cell.dateKey}>
               <button
@@ -257,45 +257,47 @@ export function HabitDetailCalendar({ habitId, habit, initial }: HabitDetailCale
         </p>
       ) : null}
 
-      {selectedKey ? (
-        <CalendarDayBackfill
-          habitId={habitId}
-          behavior={habit.behavior_type}
-          startDate={habit.start_date}
-          dateKey={selectedKey}
-          habitColor={habit.color}
-          log={
-            selectedCell?.log ??
-            habit.logs.find((l) => l.log_date === selectedKey) ??
-            null
-          }
-          scheduled={isHabitScheduledOn(habit, selectedKey)}
-        />
-      ) : null}
+      <div className="cal-v2-detail-foot">
+        {selectedKey ? (
+          <CalendarDayBackfill
+            habitId={habitId}
+            behavior={habit.behavior_type}
+            startDate={habit.start_date}
+            dateKey={selectedKey}
+            habitColor={habit.color}
+            log={
+              selectedCell?.log ??
+              habit.logs.find((l) => l.log_date === selectedKey) ??
+              null
+            }
+            scheduled={isHabitScheduledOn(habit, selectedKey)}
+          />
+        ) : null}
 
-      <footer className="cal-v2-footer">
-        <div className="cal-v2-legend">
-          <span className="cal-v2-legend-item">
-            <i className="dot completed" /> Completed
-          </span>
-          <span className="cal-v2-legend-item">
-            <i className="dot partial" /> Partial
-          </span>
-          <span className="cal-v2-legend-item">
-            <i className="dot missed" /> Missed
-          </span>
-          <span className="cal-v2-legend-item">
-            <i className="dot none" /> Not scheduled
-          </span>
-        </div>
-        <div className="cal-v2-rate">
-          <span>Completion rate</span>
-          <strong>{month.completionRate ?? 0}%</strong>
-          <div className="cal-v2-rate-bar">
-            <span style={{ width: `${month.completionRate ?? 0}%` }} />
+        <footer className="cal-v2-footer">
+          <div className="cal-v2-legend">
+            <span className="cal-v2-legend-item">
+              <i className="dot completed" /> Completed
+            </span>
+            <span className="cal-v2-legend-item">
+              <i className="dot partial" /> Partial
+            </span>
+            <span className="cal-v2-legend-item">
+              <i className="dot missed" /> Missed
+            </span>
+            <span className="cal-v2-legend-item">
+              <i className="dot none" /> Not scheduled
+            </span>
           </div>
-        </div>
-      </footer>
+          <div className="cal-v2-rate">
+            <span>Completion rate</span>
+            <strong>{month.completionRate ?? 0}%</strong>
+            <div className="cal-v2-rate-bar">
+              <span style={{ width: `${month.completionRate ?? 0}%` }} />
+            </div>
+          </div>
+        </footer>
+      </div>
     </section>
   );
 }

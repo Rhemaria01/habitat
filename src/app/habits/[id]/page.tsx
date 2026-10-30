@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getHabit } from "@/app/actions/habits";
 import { getCalendarMonthForHabit } from "@/app/actions/calendar";
 import { AppShell } from "@/components/AppShell";
+import { HabitDetailPageSkeleton } from "@/components/api/QueryLoading";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +14,7 @@ const HabitDetailClient = nextDynamic(
       default: mod.HabitDetailClient,
     })),
   {
-    loading: () => (
-      <section className="panel">
-        <p className="text-sm text-muted-foreground">Loading habit…</p>
-      </section>
-    ),
+    loading: () => <HabitDetailPageSkeleton />,
   },
 );
 
