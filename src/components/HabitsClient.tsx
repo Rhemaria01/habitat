@@ -28,6 +28,7 @@ import {
   QueryErrorBanner,
 } from "@/components/api/QueryLoading";
 import { HabitCard } from "@/components/HabitCard";
+import { useHabitGridColumnCount } from "@/hooks/use-habit-grid-columns";
 import { useHabitsQuery } from "@/hooks/api/use-habits";
 import { useDeleteHabitMutation, useReorderHabitsMutation } from "@/hooks/api/use-mutations";
 import type { HabitWithLogs } from "@/lib/types";
@@ -114,6 +115,7 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
   }, [items, filter, query]);
 
   const sortable = filter === "all" && !query.trim();
+  const gridColumns = useHabitGridColumnCount(view === "grid" && filtered.length > 0);
 
   const activeHabit = items.find((h) => h.id === activeId) ?? null;
 
@@ -189,6 +191,10 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
             habit={habit}
             index={index}
             layout={view}
+            showMascot
+            mascotIndex={index}
+            mascotGridColumns={view === "grid" ? gridColumns : 1}
+            mascotTotal={filtered.length}
             {...cardActions}
           />
         ) : (
@@ -198,6 +204,10 @@ export function HabitsClient({ habits: initialHabits }: HabitsClientProps) {
             index={index}
             sortable={false}
             layout={view}
+            showMascot
+            mascotIndex={index}
+            mascotGridColumns={view === "grid" ? gridColumns : 1}
+            mascotTotal={filtered.length}
             {...cardActions}
           />
         ),

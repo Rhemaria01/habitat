@@ -25,6 +25,10 @@ import {
 } from "@/components/api/QueryLoading";
 import { AddHabitDialog } from "@/components/AddHabitDialog";
 import { CalendarSideHabitCard } from "@/components/CalendarSideHabitCard";
+import {
+  CALENDAR_PANEL_PET_IDS,
+  PanelCornerMascots,
+} from "@/components/PanelCornerMascots";
 import { CalendarScenicBackdrop } from "@/components/CalendarScenicBackdrop";
 import { CalendarDayDots, CalendarDayRing } from "@/components/CalendarDayRing";
 import {
@@ -274,7 +278,8 @@ export function CalendarClient({ initial, initialDay }: CalendarClientProps) {
             view !== "month" && "calendar-v2-main-padded",
           )}
         >
-          {view === "month" ? <CalendarScenicBackdrop variant="fill" /> : null}
+          <CalendarScenicBackdrop variant="fill" />
+          <PanelCornerMascots petIds={CALENDAR_PANEL_PET_IDS} />
           {monthError ? (
             <QueryErrorBanner error={monthErr} className="p-4" />
           ) : null}

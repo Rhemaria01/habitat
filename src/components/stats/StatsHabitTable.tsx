@@ -5,6 +5,11 @@ import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { StatsHabitRow } from "@/app/actions/stats";
 import { HabitIcon } from "@/components/HabitIcon";
+import {
+  PanelCornerMascots,
+  STATS_PANEL_PET_IDS,
+  TABLE_PANEL_MASCOT_SIZE,
+} from "@/components/PanelCornerMascots";
 import { cn } from "@/lib/utils";
 
 type SortKey = "adherence" | "name" | "currentStreak" | "bestStreak";
@@ -60,6 +65,7 @@ export function StatsHabitTable({ rows }: StatsHabitTableProps) {
 
   return (
     <section className="glass-panel stats-habit-table-panel">
+      <PanelCornerMascots petIds={STATS_PANEL_PET_IDS} size={TABLE_PANEL_MASCOT_SIZE} />
       <div className="panel-head stats-table-head">
         <h2>Habit performance</h2>
         <label className="stats-table-sort">

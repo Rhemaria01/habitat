@@ -6,6 +6,8 @@ import { HabitCardCover } from "@/components/HabitCardCover";
 import { HabitIcon } from "@/components/HabitIcon";
 import { habitCardArtSrc } from "@/lib/content/habit-card-art";
 import type { HabitCardPreviewDraft } from "@/lib/content/habit-card-cover";
+import { habitCardSurfaceStyle } from "@/lib/habit-card-surface-style";
+import { useDocumentTheme } from "@/hooks/use-document-theme";
 import { cn } from "@/lib/utils";
 
 type HabitCardPreviewProps = {
@@ -22,6 +24,14 @@ export function HabitCardPreview({ draft }: HabitCardPreviewProps) {
   const coverStyle = draft.coverStyle;
   const showCorner = coverStyle === "corner";
   const showImage = coverStyle === "image";
+  const theme = useDocumentTheme();
+  const surfaceStyle = habitCardSurfaceStyle(
+    {
+      color: draft.color,
+      card_cover_style: showImage ? "image" : "corner",
+    },
+    theme,
+  );
 
   return (
     <article
@@ -29,7 +39,7 @@ export function HabitCardPreview({ draft }: HabitCardPreviewProps) {
         "habit-card-preview habit-card habit-card-glass habit-card-v2",
         showImage && "habit-card-v2--cover-image",
       )}
-      style={{ ["--habit" as string]: draft.color }}
+      style={surfaceStyle}
       aria-label="Habit card preview"
     >
       {showImage ? (

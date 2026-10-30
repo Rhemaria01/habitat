@@ -50,6 +50,14 @@ export function scenicBackgroundNow(theme: Theme = "dark"): string {
   return scenicBackgroundForPeriod(getDayPeriod(), theme);
 }
 
+/** Calendar scenic in dark mode (purple dusk — shared across calendar panels). */
+export const CALENDAR_SCENIC_DARK = "/images/today-scenery.jpg";
+
+/** Calendar panels use a fixed scenic behind the month grid. */
+export function calendarScenicBackground(_theme: Theme): string {
+  return CALENDAR_SCENIC_DARK;
+}
+
 export function timeGreeting(at: Date = new Date()): string {
   const hour = at.getHours();
   if (hour >= 5 && hour < 12) return "Good morning";

@@ -23,6 +23,11 @@ import { AnimatedBar } from "@/components/animated/AnimatedBar";
 import { AnimatedCheck } from "@/components/animated/AnimatedCheck";
 import { AnimatedCounter } from "@/components/animated/AnimatedCounter";
 import { AnimatedPage } from "@/components/animated/AnimatedPage";
+import {
+  PanelCornerMascots,
+  TABLE_PANEL_MASCOT_SIZE,
+  TODAY_PANEL_PET_IDS,
+} from "@/components/PanelCornerMascots";
 import { AnimatedProgressRing } from "@/components/animated/AnimatedProgress";
 import { HabitIcon } from "@/components/HabitIcon";
 import {
@@ -323,6 +328,7 @@ export function TodayClient({
       ) : null}
 
       <section className="glass-panel today-list-panel">
+        <PanelCornerMascots petIds={TODAY_PANEL_PET_IDS} size={TABLE_PANEL_MASCOT_SIZE} />
         <div className="today-panel-head">
           <div className="today-panel-title-block">
             <div className="today-panel-title-row">

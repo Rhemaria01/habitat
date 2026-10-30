@@ -12,6 +12,7 @@ import { formatScheduleLabel } from "@/lib/domain/schedule";
 import { computeStreakStats } from "@/lib/streaks";
 import { AnimatedHabitCard } from "@/components/animated/AnimatedHabitCard";
 import { HabitCardActionsMenu } from "@/components/HabitCardActionsMenu";
+import { HabitCardMascot } from "@/components/HabitCardMascot";
 import { HabitCardCornerArt } from "@/components/HabitCardCornerArt";
 import { HabitCardCover } from "@/components/HabitCardCover";
 import { resolveHabitCardArtSrc } from "@/lib/content/habit-card-art";
@@ -21,6 +22,8 @@ import {
 } from "@/lib/content/habit-card-cover";
 import type { HabitBehaviorType, HabitLog, HabitWithLogs } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { habitCardSurfaceStyle } from "@/lib/habit-card-surface-style";
+import { useDocumentTheme } from "@/hooks/use-document-theme";
 
 type HabitCardProps = {
   habit: HabitWithLogs;
@@ -28,6 +31,11 @@ type HabitCardProps = {
   overlay?: boolean;
   sortable?: boolean;
   layout?: "grid" | "list";
+  /** Show a unique bot-avatar peeking on the habits page. */
+  showMascot?: boolean;
+  mascotIndex?: number;
+  mascotGridColumns?: number;
+  mascotTotal?: number;
   onEdit?: (habit: HabitWithLogs) => void;
   onDelete?: (habit: HabitWithLogs) => void;
 };
@@ -322,15 +330,25 @@ function PlainHabitCard({
   layout = "grid",
   onEdit,
   onDelete,
+  showMascot,
+  mascotIndex = 0,
+  mascotGridColumns = 1,
+  mascotTotal = 1,
 }: {
   habit: HabitWithLogs;
   index?: number;
   overlay?: boolean;
   layout?: "grid" | "list";
+  showMascot?: boolean;
+  mascotIndex?: number;
+  mascotGridColumns?: number;
+  mascotTotal?: number;
   onEdit?: (habit: HabitWithLogs) => void;
   onDelete?: (habit: HabitWithLogs) => void;
 }) {
   const { logs, onToggleToday } = useToggleToday(habit);
+  const theme = useDocumentTheme();
+  const surfaceStyle = habitCardSurfaceStyle(habit, theme);
 
   return (
     <AnimatedHabitCard index={index} skipEnter={overlay} className="contents">
@@ -340,9 +358,18 @@ function PlainHabitCard({
           habitCardSurfaceClass(habit, layout),
           layout === "list" && "habit-card-row",
         )}
-        style={{ ["--habit" as string]: habit.color }}
+        style={surfaceStyle}
       >
         <HabitCardBackdrop habit={habit} layout={layout} />
+        {showMascot && !overlay ? (
+          <HabitCardMascot
+            habitId={habit.id}
+            index={mascotIndex}
+            gridColumns={mascotGridColumns}
+            total={mascotTotal}
+            layout={layout}
+          />
+        ) : null}
         <div className={layout === "grid" ? "habit-card-v2-body" : "contents"}>
         <CardContent
           habit={habit}
@@ -365,14 +392,24 @@ function SortableHabitCard({
   layout = "grid",
   onEdit,
   onDelete,
+  showMascot,
+  mascotIndex = 0,
+  mascotGridColumns = 1,
+  mascotTotal = 1,
 }: {
   habit: HabitWithLogs;
   index?: number;
   layout?: "grid" | "list";
+  showMascot?: boolean;
+  mascotIndex?: number;
+  mascotGridColumns?: number;
+  mascotTotal?: number;
   onEdit?: (habit: HabitWithLogs) => void;
   onDelete?: (habit: HabitWithLogs) => void;
 }) {
   const { logs, onToggleToday } = useToggleToday(habit);
+  const theme = useDocumentTheme();
+  const surfaceStyle = habitCardSurfaceStyle(habit, theme);
   const {
     attributes,
     listeners,
@@ -393,13 +430,22 @@ function SortableHabitCard({
           isDragging && "dragging",
         )}
         style={{
-          ["--habit" as string]: habit.color,
+          ...surfaceStyle,
           transform: CSS.Transform.toString(transform),
           transition,
           opacity: isDragging ? 0 : undefined,
         }}
       >
         <HabitCardBackdrop habit={habit} layout={layout} />
+        {showMascot ? (
+          <HabitCardMascot
+            habitId={habit.id}
+            index={mascotIndex}
+            gridColumns={mascotGridColumns}
+            total={mascotTotal}
+            layout={layout}
+          />
+        ) : null}
         <div className={layout === "grid" ? "habit-card-v2-body" : "contents"}>
         <CardContent
           habit={habit}
@@ -425,6 +471,10 @@ export function HabitCard({
   layout = "grid",
   onEdit,
   onDelete,
+  showMascot,
+  mascotIndex,
+  mascotGridColumns,
+  mascotTotal,
 }: HabitCardProps) {
   if (overlay || !sortable) {
     return (
@@ -433,6 +483,10 @@ export function HabitCard({
         index={index}
         overlay={overlay}
         layout={layout}
+        showMascot={showMascot}
+        mascotIndex={mascotIndex}
+        mascotGridColumns={mascotGridColumns}
+        mascotTotal={mascotTotal}
         onEdit={onEdit}
         onDelete={onDelete}
       />
@@ -444,6 +498,10 @@ export function HabitCard({
       habit={habit}
       index={index}
       layout={layout}
+      showMascot={showMascot}
+      mascotIndex={mascotIndex}
+      mascotGridColumns={mascotGridColumns}
+      mascotTotal={mascotTotal}
       onEdit={onEdit}
       onDelete={onDelete}
     />

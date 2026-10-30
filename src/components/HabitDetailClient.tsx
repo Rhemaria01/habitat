@@ -149,7 +149,7 @@ export function HabitDetailClient({ habit, initialCalendar }: HabitDetailClientP
 
       <div className="habit-detail-v2-layout">
         <div className="habit-detail-v2-left">
-          <section className="habit-detail-hero glass-panel">
+          <section className="habit-detail-hero glass-panel" data-habitat-pet-card>
             <div className="habit-detail-hero-top">
               <div className="habit-detail-hero-icon">
                 <HabitIcon icon={habit.icon} color={habit.color} size="lg" />
