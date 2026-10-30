@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { eachDayKey, todayKey } from "@/lib/dates";
+import { isHabitScheduledOn } from "@/lib/domain/schedule";
 import { dbDate, toHabit, toHabitLog, toHabitWithLogs } from "@/lib/serialize";
 import type {
   Habit,
@@ -27,19 +28,19 @@ function legacyKind(behavior: HabitBehaviorType): "build" | "quit" {
 }
 
 function habitData(input: HabitInput) {
-  return {
+  const scheduleKind = input.schedule_kind ?? "daily";
+  const base = {
     name: input.name.trim(),
     kind: legacyKind(input.behavior_type),
     behavior_type: input.behavior_type,
     description: input.description?.trim() || null,
-    system_id: input.system_id || null,
     category: input.category?.trim() || null,
     personal_reason: input.personal_reason?.trim() || null,
     start_date: dbDate(input.start_date),
     color: input.color,
     status: input.status ?? "active",
     frequency: input.frequency ?? "daily",
-    schedule_kind: input.schedule_kind ?? "daily",
+    schedule_kind: scheduleKind,
     schedule_weekdays: input.schedule_weekdays ?? [],
     schedule_days_per_week: input.schedule_days_per_week ?? null,
     schedule_custom_days: input.schedule_custom_days ?? [],
@@ -75,12 +76,35 @@ function habitData(input: HabitInput) {
     tracking_unit: input.tracking_unit?.trim() || null,
     is_priority: input.is_priority ?? false,
   };
+
+  if (scheduleKind === "every_n_days") {
+    return {
+      ...base,
+      schedule_interval_days: input.schedule_interval_days ?? 2,
+    };
+  }
+
+  return base;
 }
 
 function validateInput(input: HabitInput): string | null {
   if (!input.name.trim()) return "Give your habit a name.";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.start_date)) return "Pick a valid start date.";
   if (!/^#[0-9A-Fa-f]{6}$/.test(input.color)) return "Pick a valid color.";
+
+  const kind = input.schedule_kind ?? "daily";
+  if (kind === "every_n_days") {
+    const n = input.schedule_interval_days ?? 0;
+    if (n < 2 || n > 365) return "Pick an interval between 2 and 365 days.";
+  }
+  if (kind === "custom") {
+    const days = input.schedule_custom_days ?? [];
+    if (days.length === 0) return "Pick at least one day for this schedule.";
+  }
+  if (kind === "days_per_week") {
+    const n = input.schedule_days_per_week ?? 0;
+    if (n < 1 || n > 7) return "Pick 1–7 times per week.";
+  }
   return null;
 }
 
@@ -118,11 +142,6 @@ export async function createHabit(input: HabitInput): Promise<ActionResult<Habit
       const created = await tx.habit.create({
         data: { ...habitData(input), sort_order: (tail?.sort_order ?? -1) + 1 },
       });
-      if (input.goal_id) {
-        await tx.goalHabit.create({
-          data: { goal_id: input.goal_id, habit_id: created.id },
-        });
-      }
       return created;
     });
 
@@ -241,8 +260,11 @@ export async function seedHistoryFromStart(
   try {
     await guard();
     const missed = new Set(missedDates);
+    const row = await prisma.habit.findUnique({ where: { id: habitId } });
+    if (!row) return { ok: false, error: "Habit not found." };
+    const habit = toHabit(row);
     const logs = eachDayKey(startDate, todayKey())
-      .filter((d) => !missed.has(d))
+      .filter((d) => !missed.has(d) && isHabitScheduledOn(habit, d))
       .map((log_date) => ({
         habit_id: habitId,
         log_date: dbDate(log_date),

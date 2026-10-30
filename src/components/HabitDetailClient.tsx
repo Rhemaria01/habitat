@@ -11,6 +11,7 @@ import { HabitForm } from "@/components/HabitForm";
 import { Heatmap } from "@/components/Heatmap";
 import { MonthCalendar } from "@/components/MonthCalendar";
 import { formatLongDate } from "@/lib/dates";
+import { formatScheduleLabel } from "@/lib/domain/schedule";
 import { computeStreakStats } from "@/lib/streaks";
 import type { HabitWithLogs } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { RollingNumber } from "@/components/ui/rolling-number";
-import { CardSpotlight } from "@/components/ui/card-spotlight";
 
 type HabitDetailClientProps = {
   habit: HabitWithLogs;
@@ -44,6 +44,7 @@ export function HabitDetailClient({ habit }: HabitDetailClientProps) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const stats = computeStreakStats(habit.behavior_type, habit.start_date, habit.logs);
+  const scheduleLabel = formatScheduleLabel(habit);
 
   function onDelete() {
     setError(null);
@@ -61,7 +62,7 @@ export function HabitDetailClient({ habit }: HabitDetailClientProps) {
   }
 
   const hasFineTuning =
-    habit.frequency === "weekly" ||
+    scheduleLabel !== null ||
     habit.stack_after ||
     habit.two_minute_version ||
     habit.identity_proof;
@@ -73,20 +74,18 @@ export function HabitDetailClient({ habit }: HabitDetailClientProps) {
         All habits
       </Link>
 
-      <CardSpotlight
-        className="overflow-hidden p-6 animate-fade-up"
-        style={{ animationDelay: "40ms" }}
+      <section
+        className="panel detail-hero animate-fade-up overflow-hidden"
+        style={{ animationDelay: "40ms", ["--habit" as string]: habit.color }}
       >
-        <section
-          className="detail-hero relative z-[1]"
-          style={{ ["--habit" as string]: habit.color }}
-        >
-        <span className={`kind-chip ${habit.behavior_type}`}>
-          {habit.behavior_type}
-        </span>
-        {habit.frequency === "weekly" ? (
-          <span className="freq-chip">Weekly</span>
-        ) : null}
+        <div className="detail-hero-chips">
+          <span className={`kind-chip ${habit.behavior_type}`}>
+            {habit.behavior_type}
+          </span>
+          {scheduleLabel ? (
+            <span className="freq-chip">{scheduleLabel}</span>
+          ) : null}
+        </div>
         <h1>{habit.name}</h1>
         <p className="detail-since">
           Since {formatLongDate(habit.start_date)} · {stats.daysSinceStart} day
@@ -110,14 +109,13 @@ export function HabitDetailClient({ habit }: HabitDetailClientProps) {
           </div>
         </div>
 
-          <CheckInButton
-            habitId={habit.id}
-            behavior={habit.behavior_type}
-            startDate={habit.start_date}
-            logs={habit.logs}
-          />
-        </section>
-      </CardSpotlight>
+        <CheckInButton
+          habitId={habit.id}
+          behavior={habit.behavior_type}
+          startDate={habit.start_date}
+          logs={habit.logs}
+        />
+      </section>
 
       {hasFineTuning ? (
         <section
@@ -127,6 +125,12 @@ export function HabitDetailClient({ habit }: HabitDetailClientProps) {
           <div className="panel-head">
             <h2>How it&apos;s built</h2>
           </div>
+          {scheduleLabel ? (
+            <p className="tuning-line">
+              <span>Schedule</span>
+              {scheduleLabel}
+            </p>
+          ) : null}
           {habit.stack_after ? (
             <p className="tuning-line">
               <span>Stack</span>After I {habit.stack_after.replace(/^after\s+i\s+/i, "")}, I

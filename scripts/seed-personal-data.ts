@@ -1,5 +1,5 @@
 /**
- * Idempotent seed for personal goals, habits, and weekday routine.
+ * Idempotent seed for personal habits.
  * Run: npm run db:seed-personal
  */
 import { config } from "dotenv";
@@ -7,10 +7,9 @@ import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import {
-  PERSONAL_GOALS,
   PERSONAL_HABITS,
-  PERSONAL_WEEKDAY_ROUTINE,
-} from "../src/lib/content/personal-data.ts";
+  PERSONAL_HABIT_SOURCE_KEYS_RETIRED,
+} from "../src/lib/content/personal-data";
 
 config({ path: ".env.local" });
 config({ path: ".env" });
@@ -38,10 +37,17 @@ async function main() {
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
   const startDate = todayKey();
-  const habitIds = new Map<string, string>();
 
   try {
+    if (PERSONAL_HABIT_SOURCE_KEYS_RETIRED.length > 0) {
+      await prisma.habit.updateMany({
+        where: { source_key: { in: [...PERSONAL_HABIT_SOURCE_KEYS_RETIRED] } },
+        data: { status: "archived", archived_at: new Date() },
+      });
+    }
+
     for (const [index, h] of PERSONAL_HABITS.entries()) {
+      const habitStart = h.start_date ?? startDate;
       const existing = await prisma.habit.findFirst({
         where: { source_key: h.source_key },
       });
@@ -50,11 +56,13 @@ async function main() {
         kind: legacyKind(h.behavior_type),
         behavior_type: h.behavior_type,
         category: h.category,
-        start_date: new Date(`${startDate}T00:00:00.000Z`),
+        start_date: new Date(`${habitStart}T00:00:00.000Z`),
         color: h.color,
         frequency: h.frequency,
         schedule_kind: h.schedule_kind,
         schedule_weekdays: h.schedule_weekdays ?? [],
+        schedule_days_per_week: h.schedule_days_per_week ?? null,
+        schedule_interval_days: h.schedule_interval_days ?? null,
         planned_time: h.planned_time ?? null,
         time_window: h.time_window ?? null,
         tracking_type: h.tracking_type,
@@ -68,112 +76,17 @@ async function main() {
         source_key: h.source_key,
         sort_order: index,
         status: "active",
+        archived_at: null,
       };
 
-      const row = existing
-        ? await prisma.habit.update({ where: { id: existing.id }, data })
-        : await prisma.habit.create({ data });
-      habitIds.set(h.source_key, row.id);
-    }
-
-    for (const g of PERSONAL_GOALS) {
-      let goal = await prisma.goal.findFirst({
-        where: { title: g.title },
-      });
-      if (!goal) {
-        goal = await prisma.goal.create({
-          data: {
-            title: g.title,
-            identity_statement: g.identity_statement,
-            why: g.why,
-            color: g.color,
-            status: "active",
-          },
-        });
-      } else {
-        goal = await prisma.goal.update({
-          where: { id: goal.id },
-          data: {
-            identity_statement: g.identity_statement,
-            why: g.why,
-            color: g.color,
-          },
-        });
-      }
-
-      for (const key of g.habit_source_keys) {
-        const habitId = habitIds.get(key);
-        if (!habitId) continue;
-        await prisma.goalHabit.upsert({
-          where: {
-            goal_id_habit_id: { goal_id: goal.id, habit_id: habitId },
-          },
-          update: {},
-          create: { goal_id: goal.id, habit_id: habitId },
-        });
-      }
-    }
-
-    const routineMeta = PERSONAL_WEEKDAY_ROUTINE;
-    let routine = await prisma.routine.findFirst({
-      where: { name: routineMeta.name },
-    });
-    if (!routine) {
-      routine = await prisma.routine.create({
-        data: {
-          name: routineMeta.name,
-          description: routineMeta.description,
-          schedule_kind: routineMeta.schedule_kind,
-          schedule_weekdays: routineMeta.schedule_weekdays,
-          status: "active",
-          sort_order: 0,
-        },
-      });
-    } else {
-      routine = await prisma.routine.update({
-        where: { id: routine.id },
-        data: {
-          description: routineMeta.description,
-          schedule_kind: routineMeta.schedule_kind,
-          schedule_weekdays: routineMeta.schedule_weekdays,
-        },
-      });
-    }
-
-    const existingSteps = await prisma.routineStep.findMany({
-      where: { routine_id: routine.id },
-      orderBy: { sort_order: "asc" },
-    });
-
-    for (const [index, step] of routineMeta.steps.entries()) {
-      const habitId = step.habit_source_key
-        ? habitIds.get(step.habit_source_key) ?? null
-        : null;
-      const existing = existingSteps[index];
       if (existing) {
-        await prisma.routineStep.update({
-          where: { id: existing.id },
-          data: {
-            title: step.title,
-            habit_id: habitId,
-            sort_order: index,
-          },
-        });
+        await prisma.habit.update({ where: { id: existing.id }, data });
       } else {
-        await prisma.routineStep.create({
-          data: {
-            routine_id: routine.id,
-            title: step.title,
-            habit_id: habitId,
-            sort_order: index,
-          },
-        });
+        await prisma.habit.create({ data });
       }
     }
 
-    console.log(
-      `Seeded ${PERSONAL_HABITS.length} habits, ${PERSONAL_GOALS.length} goals, routine "${routineMeta.name}".`,
-    );
+    console.log(`Seeded ${PERSONAL_HABITS.length} habits.`);
   } finally {
     await prisma.$disconnect();
     await pool.end();

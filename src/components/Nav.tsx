@@ -3,13 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ClipboardList,
-  Layers,
+  BarChart3,
   ListChecks,
   Settings,
   SunMedium,
-  Target,
-  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,10 +17,7 @@ const LINKS: {
 }[] = [
   { href: "/", label: "Today", icon: SunMedium },
   { href: "/habits", label: "Habits", icon: ListChecks },
-  { href: "/routines", label: "Routines", icon: Workflow },
-  { href: "/goals", label: "Goals", icon: Target },
-  { href: "/systems", label: "Systems", icon: Layers },
-  { href: "/review", label: "Review", icon: ClipboardList },
+  { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -56,7 +50,7 @@ export function SideNav() {
 export function TabBar() {
   const pathname = usePathname();
   const mobileLinks = LINKS.filter((l) =>
-    ["/", "/habits", "/routines", "/goals", "/review"].includes(l.href),
+    ["/", "/habits", "/stats", "/settings"].includes(l.href),
   );
   return (
     <nav className="tabbar" aria-label="Primary">

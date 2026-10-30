@@ -22,7 +22,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Habitat",
   description:
-    "Goals, systems, habits, and routines — a calm daily workspace for honest tracking.",
+    "Simple habit tracking — log today, see your streaks and stats.",
   applicationName: "Habitat",
   appleWebApp: {
     capable: true,
@@ -63,6 +63,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-dvh flex-col antialiased">
         {/* Re-apply the stored theme before paint: the PWA precaches the
             offline shell, so its server-rendered data-theme can be stale. */}
+        <Script
+          id="dev-sw-cleanup"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html:
+              "if(typeof window!=='undefined'&&location.hostname==='localhost'&&'serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(x){x.unregister();});});}",
+          }}
+        />
         <Script
           id="theme-sync"
           strategy="beforeInteractive"

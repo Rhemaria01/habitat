@@ -25,7 +25,7 @@ import {
 import { reorderHabits } from "@/app/actions/habits";
 import { HabitCard } from "@/components/HabitCard";
 import { HabitForm } from "@/components/HabitForm";
-import type { GoalWithHabits, HabitWithLogs } from "@/lib/types";
+import type { HabitWithLogs } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -35,23 +35,12 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/components/ui/toggle-group";
 
 type HabitsClientProps = {
   habits: HabitWithLogs[];
-  /** Only id + title are used (picker and filter). */
-  goals: GoalWithHabits[];
-  /** habit id -> goal ids it serves (for the goal filter). */
-  goalIdsByHabit: Record<string, string[]>;
 };
 
 type Filter = "all" | "build" | "reduce" | "avoid";
@@ -66,14 +55,9 @@ function isSameSet(a: string[], b: string[]) {
   return b.every((id) => set.has(id));
 }
 
-export function HabitsClient({
-  habits,
-  goals,
-  goalIdsByHabit,
-}: HabitsClientProps) {
+export function HabitsClient({ habits }: HabitsClientProps) {
   const [open, setOpen] = useState(habits.length === 0);
   const [filter, setFilter] = useState<Filter>("all");
-  const [goalFilter, setGoalFilter] = useState<string>("all");
   const [order, setOrder] = useState(() => orderFromHabits(habits));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -93,15 +77,12 @@ export function HabitsClient({
   const filtered = useMemo(
     () =>
       items.filter(
-        (h) =>
-          (filter === "all" || h.behavior_type === filter) &&
-          (goalFilter === "all" ||
-            (goalIdsByHabit[h.id] ?? []).includes(goalFilter)),
+        (h) => filter === "all" || h.behavior_type === filter,
       ),
-    [items, filter, goalFilter, goalIdsByHabit],
+    [items, filter],
   );
 
-  const sortable = filter === "all" && goalFilter === "all";
+  const sortable = filter === "all";
 
   const activeHabit = items.find((h) => h.id === activeId) ?? null;
 
@@ -166,10 +147,10 @@ export function HabitsClient({
             <EmptyMedia variant="icon">
               <Sprout aria-hidden />
             </EmptyMedia>
-            <EmptyTitle>Plant your first habit</EmptyTitle>
+            <EmptyTitle>Add your first habit</EmptyTitle>
             <EmptyDescription>
-              Grow a good one, or start counting days free of an old one. Habits
-              are the tasks your goals are made of.
+              Track something you want to do more of, or something you want to
+              cut back on.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -197,27 +178,6 @@ export function HabitsClient({
               Avoid
             </ToggleGroupItem>
           </ToggleGroup>
-
-          {goals.length > 0 ? (
-            <div className="mt-3 flex flex-col gap-2">
-              <label htmlFor="goal-filter" className="sr-only">
-                Filter by goal
-              </label>
-              <Select value={goalFilter} onValueChange={setGoalFilter}>
-                <SelectTrigger id="goal-filter" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All goals</SelectItem>
-                  {goals.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
 
           {sortable ? (
             <p className="grid-hint">Drag the handle to rearrange</p>
@@ -254,25 +214,18 @@ export function HabitsClient({
       >
         <div className="panel-head">
           <h2>{open ? "New habit" : "Add a habit"}</h2>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" asChild>
-              <Link href="/habits/new">Full wizard</Link>
+          {habits.length > 0 ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setOpen((v) => !v)}
+            >
+              {open ? "Hide" : "Quick add"}
             </Button>
-            {habits.length > 0 ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setOpen((v) => !v)}
-              >
-                {open ? "Hide" : "Quick add"}
-              </Button>
-            ) : null}
-          </div>
+          ) : null}
         </div>
-        {open ? (
-          <HabitForm goals={goals} onDone={() => setOpen(false)} />
-        ) : null}
+        {open ? <HabitForm onDone={() => setOpen(false)} /> : null}
       </section>
     </div>
   );

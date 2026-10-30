@@ -17,7 +17,7 @@ export function AppShell({ children, wide = false }: AppShellProps) {
         <Link href="/" className="side-brand">
           Habitat
         </Link>
-        <p className="side-tagline">Your daily systems workspace</p>
+        <p className="side-tagline">Simple habit tracking</p>
         <SideNav />
         <div className="side-foot">
           <ThemeToggle />
@@ -43,7 +43,9 @@ export function AppShell({ children, wide = false }: AppShellProps) {
             </form>
           </div>
         </header>
-        <div className="shell-content">{children}</div>
+        <div className="shell-page">
+          <div className="shell-content">{children}</div>
+        </div>
         <TabBar />
       </main>
     </div>

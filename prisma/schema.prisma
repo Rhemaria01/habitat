@@ -37,55 +37,12 @@ model Profile {
   @@map("profiles")
 }
 
-model System {
-  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name             String
-  description      String?
-  purpose          String?
-  cadence          String?
-  status           String       @default("active")
-  working_well     String       @default("")
-  causing_friction String       @default("")
-  created_at       DateTime     @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime     @default(now()) @db.Timestamptz(6)
-  goal_systems     GoalSystem[]
-  habits           Habit[]
-
-  @@map("systems")
-}
-
-model GoalSystem {
-  goal_id    String   @db.Uuid
-  system_id  String   @db.Uuid
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  goal       Goal     @relation(fields: [goal_id], references: [id], onDelete: Cascade)
-  system     System   @relation(fields: [system_id], references: [id], onDelete: Cascade)
-
-  @@id([goal_id, system_id])
-  @@map("goal_systems")
-}
-
-model GoalCheckin {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  goal_id      String   @db.Uuid
-  checkin_date DateTime @db.Date
-  value        Decimal? @db.Decimal
-  note         String   @default("")
-  created_at   DateTime @default(now()) @db.Timestamptz(6)
-  goal         Goal     @relation(fields: [goal_id], references: [id], onDelete: Cascade)
-
-  @@unique([goal_id, checkin_date])
-  @@index([goal_id, checkin_date], map: "goal_checkins_goal_date_idx")
-  @@map("goal_checkins")
-}
-
 model Habit {
   id                         String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                       String
   kind                       habit_kind
   behavior_type              habit_behavior_type @default(build)
   description                String?
-  system_id                  String?             @db.Uuid
   category                   String?
   personal_reason            String?
   start_date                 DateTime            @db.Date
@@ -126,6 +83,7 @@ model Habit {
   schedule_weekdays          Int[]               @default([])
   schedule_days_per_week     Int?                @db.SmallInt
   schedule_custom_days       Int[]               @default([])
+  schedule_interval_days     Int?                @db.SmallInt
   schedule_end_date          DateTime?           @db.Date
   time_window                String?
   planned_time               String?
@@ -133,10 +91,6 @@ model Habit {
   tracking_unit              String?
   is_priority                Boolean             @default(false)
   logs                       HabitLog[]
-  goal_habits                GoalHabit[]
-  routine_habit_links        RoutineHabitLink[]
-  routine_steps              RoutineStep[]
-  system                     System?             @relation(fields: [system_id], references: [id], onDelete: SetNull)
   anchor_habit               Habit?              @relation("HabitAnchor", fields: [anchor_habit_id], references: [id], onDelete: SetNull)
   anchored_by                Habit[]             @relation("HabitAnchor")
 
@@ -158,180 +112,4 @@ model HabitLog {
   @@unique([habit_id, log_date])
   @@index([habit_id, log_date], map: "habit_logs_habit_date_idx")
   @@map("habit_logs")
-}
-
-model Goal {
-  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title              String
-  identity_statement String?
-  why                String?
-  description        String?
-  outcome_definition String?
-  metric_type        String?
-  metric_unit        String?
-  baseline_value     Decimal?      @db.Decimal
-  target_value       Decimal?      @db.Decimal
-  current_value      Decimal?      @db.Decimal
-  metric_direction   String        @default("increase")
-  status             String        @default("active")
-  priority           Int           @default(0) @db.SmallInt
-  start_date         DateTime?     @db.Date
-  color              String        @default("#A78BFA")
-  target_date        DateTime?     @db.Date
-  archived_at        DateTime?     @db.Timestamptz(6)
-  created_at         DateTime      @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime      @default(now()) @db.Timestamptz(6)
-  goal_habits        GoalHabit[]
-  goal_systems       GoalSystem[]
-  checkins           GoalCheckin[]
-
-  @@map("goals")
-}
-
-model GoalHabit {
-  goal_id    String   @db.Uuid
-  habit_id   String   @db.Uuid
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  goal       Goal     @relation(fields: [goal_id], references: [id], onDelete: Cascade)
-  habit      Habit    @relation(fields: [habit_id], references: [id], onDelete: Cascade)
-
-  @@id([goal_id, habit_id])
-  @@map("goal_habits")
-}
-
-model Routine {
-  id                   String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                 String
-  description          String?
-  schedule_kind        String         @default("daily")
-  schedule_weekdays    Int[]          @default([])
-  schedule_custom_days Int[]          @default([])
-  time_window          String?
-  planned_time         String?
-  status               String         @default("active")
-  sort_order           Int            @default(0)
-  created_at           DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime       @default(now()) @db.Timestamptz(6)
-  steps                RoutineStep[]
-
-  @@map("routines")
-}
-
-model RoutineStep {
-  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  routine_id       String            @db.Uuid
-  title            String
-  habit_id         String?           @db.Uuid
-  sort_order       Int               @default(0)
-  duration_minutes Int?
-  is_optional      Boolean           @default(false)
-  notes            String?
-  created_at       DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime          @default(now()) @db.Timestamptz(6)
-  routine          Routine           @relation(fields: [routine_id], references: [id], onDelete: Cascade)
-  habit            Habit?            @relation(fields: [habit_id], references: [id], onDelete: SetNull)
-  step_logs        RoutineStepLog[]
-
-  @@index([routine_id, sort_order], map: "routine_steps_routine_order_idx")
-  @@map("routine_steps")
-}
-
-model RoutineStepLog {
-  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  routine_step_id String      @db.Uuid
-  log_date        DateTime    @db.Date
-  done            Boolean     @default(true)
-  note            String?
-  created_at      DateTime    @default(now()) @db.Timestamptz(6)
-  step            RoutineStep @relation(fields: [routine_step_id], references: [id], onDelete: Cascade)
-
-  @@unique([routine_step_id, log_date])
-  @@map("routine_step_logs")
-}
-
-model HabitAudit {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  behavior       String
-  classification String
-  notes          String   @default("")
-  sort_order     Int      @default(0)
-  created_at     DateTime @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime @default(now()) @db.Timestamptz(6)
-
-  @@map("habit_audits")
-}
-
-model Review {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  review_type     String
-  period_start    DateTime @db.Date
-  period_end      DateTime @db.Date
-  responses       Json     @default("{}")
-  adjustment_note String   @default("")
-  created_at      DateTime @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime @default(now()) @db.Timestamptz(6)
-
-  @@unique([review_type, period_start])
-  @@map("reviews")
-}
-
-// Legacy routine slot model (read-only after migration)
-model RoutineSlot {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  slot_key   String   @unique
-  day_type   String
-  time       String
-  title      String
-  do_text    String   @default("")
-  dont_text  String   @default("")
-  sort_order Int      @default(0)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  updated_at DateTime @default(now()) @db.Timestamptz(6)
-
-  @@index([day_type, sort_order], map: "routine_slots_day_order_idx")
-  @@map("routine_slots")
-}
-
-model RoutineSlotCheck {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  slot_key   String
-  slot_date  DateTime @db.Date
-  done       Boolean  @default(true)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-
-  @@unique([slot_key, slot_date])
-  @@map("routine_slot_checks")
-}
-
-model RoutineHabitLink {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  slot_key   String
-  habit_id   String   @db.Uuid
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  habit      Habit    @relation(fields: [habit_id], references: [id], onDelete: Cascade)
-
-  @@unique([slot_key, habit_id])
-  @@map("routine_habit_links")
-}
-
-model WeeklyReview {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  week_start_date DateTime @unique @db.Date
-  moved_closer    Boolean
-  notes           String   @default("")
-  created_at      DateTime @default(now()) @db.Timestamptz(6)
-
-  @@map("weekly_reviews")
-}
-
-model Reflection {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  reflect_date    DateTime @unique @db.Date
-  went_well       String   @default("")
-  distracted      String   @default("")
-  improve_tomorrow String  @default("")
-  created_at      DateTime @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime @default(now()) @db.Timestamptz(6)
-
-  @@map("reflections")
 }

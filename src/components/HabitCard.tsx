@@ -9,6 +9,7 @@ import { GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { toggleHabitDay } from "@/app/actions/habits";
 import { todayKey } from "@/lib/dates";
+import { formatScheduleLabel } from "@/lib/domain/schedule";
 import { computeStreakStats } from "@/lib/streaks";
 import { RollingNumber } from "@/components/ui/rolling-number";
 import type { HabitLog, HabitWithLogs } from "@/lib/types";
@@ -81,6 +82,7 @@ function CardContent({
 }) {
   const today = todayKey();
   const stats = computeStreakStats(habit.behavior_type, habit.start_date, logs, today);
+  const scheduleLabel = formatScheduleLabel(habit);
   const todayActive = logs.some((l) => l.log_date === today);
   const canCheckToday = today >= habit.start_date;
 
@@ -109,8 +111,8 @@ function CardContent({
             <span className={`kind-chip ${habit.behavior_type}`}>
               {habit.behavior_type}
             </span>
-            {habit.frequency === "weekly" ? (
-              <span className="freq-chip">Weekly</span>
+            {scheduleLabel ? (
+              <span className="freq-chip">{scheduleLabel}</span>
             ) : null}
           </span>
           <span className="streak-num">

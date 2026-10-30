@@ -10,14 +10,7 @@ async function guard() {
   await requireAuth();
 }
 
-export type OnboardingStep =
-  | "direction"
-  | "goals"
-  | "audit"
-  | "focus"
-  | "habit"
-  | "schedule"
-  | "done";
+export type OnboardingStep = "welcome" | "done";
 
 export async function getOnboardingState(): Promise<{
   step: OnboardingStep;
@@ -26,7 +19,9 @@ export async function getOnboardingState(): Promise<{
   await guard();
   const profile = await getOrCreateProfile();
   const onboarding = profile.onboarding ?? {};
-  const step = (onboarding.step as OnboardingStep) ?? "direction";
+  const raw = onboarding.step as string | undefined;
+  const step: OnboardingStep =
+    raw === "done" ? "done" : raw === "welcome" ? "welcome" : "welcome";
   const data = (onboarding.data as Record<string, unknown>) ?? {};
   return { step, data };
 }

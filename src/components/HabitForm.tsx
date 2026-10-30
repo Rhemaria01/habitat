@@ -7,22 +7,20 @@ import { createHabit, seedHistoryFromStart, updateHabit } from "@/app/actions/ha
 import { PastDaysPicker } from "@/components/PastDaysPicker";
 import { formatLongDate, todayKey } from "@/lib/dates";
 import type {
-  Goal,
   Habit,
-  HabitFrequency,
   HabitBehaviorType,
   HabitInput,
 } from "@/lib/types";
+import {
+  habitScheduleInput,
+  scheduleFormFromHabit,
+  validateScheduleForm,
+  WEEKDAY_LABELS,
+  type ScheduleFormState,
+} from "@/lib/domain/schedule-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -39,14 +37,8 @@ const COLORS = [
   "#F4576B",
 ];
 
-const NO_GOAL = "__none__";
-
 type HabitFormProps = {
   habit?: Habit;
-  /** Goals offered in the "serves a goal" picker (create only). */
-  goals?: Goal[];
-  /** Preselect this goal when adding from a goal's detail page. */
-  defaultGoalId?: string;
   onDone?: () => void;
   compact?: boolean;
 };
@@ -55,8 +47,6 @@ type Step = "details" | "history-ask" | "history-pick";
 
 export function HabitForm({
   habit,
-  goals = [],
-  defaultGoalId,
   onDone,
   compact,
 }: HabitFormProps) {
@@ -67,56 +57,42 @@ export function HabitForm({
   const [behavior, setBehavior] = useState<HabitBehaviorType>(
     habit?.behavior_type ?? "build",
   );
-  const [frequency, setFrequency] = useState<HabitFrequency>(
-    habit?.frequency ?? "daily",
+  const [schedule, setSchedule] = useState<ScheduleFormState>(() =>
+    scheduleFormFromHabit(habit),
   );
   const [startDate, setStartDate] = useState(habit?.start_date ?? todayKey());
   const [color, setColor] = useState(habit?.color ?? COLORS[0]);
-  const [stackAfter, setStackAfter] = useState(habit?.stack_after ?? "");
-  const [twoMinute, setTwoMinute] = useState(
-    habit?.two_minute_version ?? "",
-  );
-  const [identityProof, setIdentityProof] = useState(
-    habit?.identity_proof ?? "",
-  );
-  const [goalId, setGoalId] = useState(defaultGoalId ?? NO_GOAL);
   const [step, setStep] = useState<Step>("details");
   const [markedDays, setMarkedDays] = useState<Set<string>>(new Set());
 
   const needsHistoryOnboarding = !habit && startDate < todayKey();
   const isReduce = behavior !== "build";
-  const showGoalPicker = !habit && goals.length > 0;
 
   function resetForm() {
     setName("");
     setBehavior("build");
-    setFrequency("daily");
+    setSchedule(scheduleFormFromHabit());
     setStartDate(todayKey());
     setColor(COLORS[0]);
-    setStackAfter("");
-    setTwoMinute("");
-    setIdentityProof("");
-    setGoalId(NO_GOAL);
     setStep("details");
     setMarkedDays(new Set());
   }
 
   function save(historyDates: string[] | null = null) {
     setError(null);
+    const scheduleError = validateScheduleForm(schedule);
+    if (scheduleError) {
+      setError(scheduleError);
+      return;
+    }
+
     const payload: HabitInput = {
       name,
       behavior_type: behavior,
       start_date: startDate,
       color,
-      frequency,
-      stack_after: stackAfter.trim() || null,
-      minimum_version: twoMinute.trim() || null,
-      identity_proof: identityProof.trim() || null,
+      ...habitScheduleInput(schedule),
     };
-
-    if (!habit) {
-      if (goalId && goalId !== NO_GOAL) payload.goal_id = goalId;
-    }
 
     startTransition(async () => {
       const result = habit
@@ -138,7 +114,7 @@ export function HabitForm({
         );
       }
 
-      toast.success(habit ? "Habit updated." : `"${result.data.name}" planted.`);
+      toast.success(habit ? "Habit updated." : `"${result.data.name}" added.`);
       resetForm();
       onDone?.();
       router.refresh();
@@ -246,10 +222,10 @@ export function HabitForm({
           {pending
             ? "Saving…"
             : markedDays.size === 0
-              ? "Plant habit · all kept"
+              ? "Save habit · all kept"
               : isReduce
-                ? `Plant habit · ${markedDays.size} slip${markedDays.size === 1 ? "" : "s"}`
-                : `Plant habit · ${markedDays.size} miss${markedDays.size === 1 ? "" : "es"}`}
+                ? `Save habit · ${markedDays.size} slip${markedDays.size === 1 ? "" : "s"}`
+                : `Save habit · ${markedDays.size} miss${markedDays.size === 1 ? "" : "es"}`}
         </Button>
       </div>
     );
@@ -281,7 +257,7 @@ export function HabitForm({
         spacing={0}
       >
         <ToggleGroupItem value="build" className="flex-1" aria-label="Grow a habit">
-          Grow a habit
+          Build
         </ToggleGroupItem>
         <ToggleGroupItem value="reduce" className="flex-1" aria-label="Reduce a habit">
           Reduce
@@ -293,22 +269,162 @@ export function HabitForm({
 
       <ToggleGroup
         type="single"
-        value={frequency}
-        onValueChange={(v) => v && setFrequency(v as HabitFrequency)}
+        value={schedule.mode}
+        onValueChange={(v) => v && setSchedule((s) => ({ ...s, mode: v as ScheduleFormState["mode"] }))}
         className="w-full justify-stretch rounded-lg bg-muted p-1"
         size="sm"
         spacing={0}
       >
         <ToggleGroupItem value="daily" className="flex-1" aria-label="Every day">
-          Every day
+          Daily
         </ToggleGroupItem>
         <ToggleGroupItem value="weekly" className="flex-1" aria-label="Weekly">
           Weekly
         </ToggleGroupItem>
+        <ToggleGroupItem value="custom" className="flex-1" aria-label="Custom schedule">
+          Custom
+        </ToggleGroupItem>
       </ToggleGroup>
 
+      {schedule.mode === "weekly" ? (
+        <div className="flex flex-col gap-2">
+          <ToggleGroup
+            type="single"
+            value={schedule.weeklyVariant}
+            onValueChange={(v) =>
+              v &&
+              setSchedule((s) => ({
+                ...s,
+                weeklyVariant: v as ScheduleFormState["weeklyVariant"],
+              }))
+            }
+            className="w-full justify-stretch rounded-lg bg-muted p-1"
+            size="sm"
+            spacing={0}
+          >
+            <ToggleGroupItem value="once" className="flex-1">
+              Once a week
+            </ToggleGroupItem>
+            <ToggleGroupItem value="times" className="flex-1">
+              Times per week
+            </ToggleGroupItem>
+          </ToggleGroup>
+          {schedule.weeklyVariant === "once" ? (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="habit-weekly-day">On</Label>
+              <select
+                id="habit-weekly-day"
+                className="habit-select"
+                value={schedule.weeklyDay}
+                onChange={(e) =>
+                  setSchedule((s) => ({
+                    ...s,
+                    weeklyDay: Number(e.target.value),
+                  }))
+                }
+              >
+                {WEEKDAY_LABELS.map((label, index) => (
+                  <option key={label} value={index}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="habit-times-week">Target</Label>
+              <Input
+                id="habit-times-week"
+                type="number"
+                min={1}
+                max={7}
+                value={schedule.timesPerWeek}
+                onChange={(e) =>
+                  setSchedule((s) => ({
+                    ...s,
+                    timesPerWeek: Number(e.target.value) || 1,
+                  }))
+                }
+              />
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {schedule.mode === "custom" ? (
+        <div className="flex flex-col gap-2">
+          <ToggleGroup
+            type="single"
+            value={schedule.customVariant}
+            onValueChange={(v) =>
+              v &&
+              setSchedule((s) => ({
+                ...s,
+                customVariant: v as ScheduleFormState["customVariant"],
+              }))
+            }
+            className="w-full justify-stretch rounded-lg bg-muted p-1"
+            size="sm"
+            spacing={0}
+          >
+            <ToggleGroupItem value="weekdays" className="flex-1">
+              On days
+            </ToggleGroupItem>
+            <ToggleGroupItem value="interval" className="flex-1">
+              Every N days
+            </ToggleGroupItem>
+          </ToggleGroup>
+          {schedule.customVariant === "weekdays" ? (
+            <div className="schedule-weekdays" role="group" aria-label="Days of week">
+              {WEEKDAY_LABELS.map((label, index) => {
+                const on = schedule.weekdays.includes(index);
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    className={`schedule-weekday ${on ? "on" : ""}`}
+                    aria-pressed={on}
+                    onClick={() =>
+                      setSchedule((s) => ({
+                        ...s,
+                        weekdays: on
+                          ? s.weekdays.filter((d) => d !== index)
+                          : [...s.weekdays, index],
+                      }))
+                    }
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="habit-interval">Every</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="habit-interval"
+                  type="number"
+                  min={2}
+                  max={365}
+                  className="w-24"
+                  value={schedule.intervalDays}
+                  onChange={(e) =>
+                    setSchedule((s) => ({
+                      ...s,
+                      intervalDays: Number(e.target.value) || 2,
+                    }))
+                  }
+                />
+                <span className="text-sm text-muted-foreground">days</span>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-2">
-        <Label htmlFor="habit-start">{behavior !== "build" ? "Quit date" : "Started on"}</Label>
+        <Label htmlFor="habit-start">{behavior !== "build" ? "Start date" : "Started on"}</Label>
         <Input
           id="habit-start"
           type="date"
@@ -324,71 +440,11 @@ export function HabitForm({
           <Lightbulb className="size-4" aria-hidden />
           <AlertDescription>
             {isReduce
-              ? "Past quit date — next we’ll ask if you relapsed since then. Days stay clean by default."
+              ? "Past start date — next we’ll ask if you relapsed since then. Days stay clean by default."
               : "Past start date — next we’ll ask if you missed any days. Days count as kept by default."}
           </AlertDescription>
         </Alert>
       ) : null}
-
-      <details className="form-more">
-        <summary>The fine-tuning (optional)</summary>
-
-        <div className="flex flex-col gap-4 pt-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="habit-stack">
-              Habit stack — “After I ___, I will ___”
-            </Label>
-            <Input
-              id="habit-stack"
-              value={stackAfter}
-              onChange={(e) => setStackAfter(e.target.value)}
-              placeholder="After I pour my morning coffee…"
-              maxLength={200}
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="habit-two-minute">2-minute version — the tiny entry point</Label>
-            <Input
-              id="habit-two-minute"
-              value={twoMinute}
-              onChange={(e) => setTwoMinute(e.target.value)}
-              placeholder="Put on my running shoes"
-              maxLength={200}
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="habit-identity">Identity proof — the vote this casts</Label>
-            <Input
-              id="habit-identity"
-              value={identityProof}
-              onChange={(e) => setIdentityProof(e.target.value)}
-              placeholder="Proof I am a healthy person"
-              maxLength={200}
-            />
-          </div>
-
-          {showGoalPicker ? (
-            <div className="flex flex-col gap-2">
-              <Label>Serves a goal</Label>
-              <Select value={goalId} onValueChange={setGoalId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="No goal yet" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_GOAL}>No goal yet</SelectItem>
-                  {goals.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-        </div>
-      </details>
 
       <div className="flex flex-col gap-2">
         <Label>Color</Label>
@@ -415,7 +471,7 @@ export function HabitForm({
             ? "Save changes"
             : needsHistoryOnboarding
               ? "Continue"
-              : "Plant habit"}
+              : "Add habit"}
       </Button>
     </form>
   );

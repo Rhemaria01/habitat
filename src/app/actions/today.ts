@@ -6,37 +6,16 @@ import { isHabitScheduledOn } from "@/lib/domain/schedule";
 import { prisma } from "@/lib/db";
 import { addDays, todayKey, weekStartKey } from "@/lib/dates";
 import { adherenceForRange } from "@/lib/domain/adherence";
-import {
-  dbDate,
-  toHabitWithLogs,
-  toRoutine,
-  toRoutineStep,
-  toRoutineStepLog,
-} from "@/lib/serialize";
-import type { HabitLogStatus, RoutineWithSteps, TodayHabitItem } from "@/lib/types";
+import { dbDate, toHabitWithLogs } from "@/lib/serialize";
+import type { HabitLogStatus, TodayHabitItem } from "@/lib/types";
 import type { ActionResult } from "@/app/actions/settings";
 
 async function guard() {
   await requireAuth();
 }
 
-function routineRunsOn(routine: { schedule_kind: string; schedule_weekdays: number[]; schedule_custom_days: number[] }, dateKey: string): boolean {
-  const dow = new Date(`${dateKey}T12:00:00`).getDay();
-  if (routine.schedule_kind === "daily") return true;
-  if (routine.schedule_kind === "weekdays") {
-    return routine.schedule_weekdays.length
-      ? routine.schedule_weekdays.includes(dow)
-      : dow >= 1 && dow <= 5;
-  }
-  if (routine.schedule_kind === "custom") {
-    return routine.schedule_custom_days.includes(dow);
-  }
-  return true;
-}
-
 export async function getTodayData(dateKey: string = todayKey()): Promise<{
   items: TodayHabitItem[];
-  routines: RoutineWithSteps[];
   weekAdherence: number | null;
 }> {
   await guard();
@@ -47,37 +26,12 @@ export async function getTodayData(dateKey: string = todayKey()): Promise<{
     include: { logs: { where: { log_date: dbDate(dateKey) } } },
   });
 
-  const routineRows = await prisma.routine.findMany({
-    where: { status: "active" },
-    orderBy: { sort_order: "asc" },
-    include: { steps: { orderBy: { sort_order: "asc" } } },
-  });
-
-  const routines = routineRows
-    .filter((r) => routineRunsOn(r, dateKey))
-    .map((r) => ({
-      ...toRoutine(r),
-      steps: r.steps.map(toRoutineStep),
-    }));
-
-  const habitRoutineMap = new Map<string, string[]>();
-  for (const r of routines) {
-    for (const step of r.steps) {
-      if (step.habit_id) {
-        const list = habitRoutineMap.get(step.habit_id) ?? [];
-        list.push(r.name);
-        habitRoutineMap.set(step.habit_id, list);
-      }
-    }
-  }
-
   const items: TodayHabitItem[] = habits.map((row) => {
     const habit = toHabitWithLogs({ ...row, logs: row.logs });
     return {
       habit,
       scheduled: isHabitScheduledOn(habit, dateKey),
       log: habit.logs[0] ?? null,
-      routineNames: habitRoutineMap.get(habit.id) ?? [],
     };
   });
 
@@ -111,7 +65,6 @@ export async function getTodayData(dateKey: string = todayKey()): Promise<{
 
   return {
     items,
-    routines,
     weekAdherence: rateCount ? Math.round((totalRate / rateCount) * 10) / 10 : null,
   };
 }
@@ -161,47 +114,6 @@ export async function setHabitLog(
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Could not save log." };
   }
-}
-
-export async function toggleRoutineStep(
-  stepId: string,
-  logDate: string,
-  done: boolean,
-): Promise<ActionResult> {
-  try {
-    await guard();
-    if (!done) {
-      await prisma.routineStepLog.deleteMany({
-        where: { routine_step_id: stepId, log_date: dbDate(logDate) },
-      });
-    } else {
-      await prisma.routineStepLog.upsert({
-        where: {
-          routine_step_id_log_date: {
-            routine_step_id: stepId,
-            log_date: dbDate(logDate),
-          },
-        },
-        update: { done: true },
-        create: { routine_step_id: stepId, log_date: dbDate(logDate), done: true },
-      });
-    }
-    revalidatePath("/");
-    revalidatePath("/routines");
-    return { ok: true, data: undefined };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Could not update step." };
-  }
-}
-
-export async function getRoutineStepLogsForDate(
-  dateKey: string,
-): Promise<ReturnType<typeof toRoutineStepLog>[]> {
-  await guard();
-  const rows = await prisma.routineStepLog.findMany({
-    where: { log_date: dbDate(dateKey) },
-  });
-  return rows.map(toRoutineStepLog);
 }
 
 export async function getMissedRecoveryHint(dateKey: string = todayKey()): Promise<string | null> {

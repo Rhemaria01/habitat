@@ -11,7 +11,12 @@ export type HabitLogStatus =
 /** @deprecated use HabitLogStatus */
 export type LogStatus = HabitLogStatus | "done" | "relapse";
 
-export type ScheduleKind = "daily" | "weekdays" | "days_per_week" | "custom";
+export type ScheduleKind =
+  | "daily"
+  | "weekdays"
+  | "days_per_week"
+  | "custom"
+  | "every_n_days";
 export type HabitFrequency = "daily" | "weekly";
 export type HabitStatus = "active" | "paused" | "archived";
 export type TimeWindow = "morning" | "afternoon" | "evening" | "custom";
@@ -22,7 +27,6 @@ export type Habit = {
   kind: HabitKind;
   behavior_type: HabitBehaviorType;
   description: string | null;
-  system_id: string | null;
   category: string | null;
   personal_reason: string | null;
   start_date: string;
@@ -63,6 +67,7 @@ export type Habit = {
   schedule_weekdays: number[];
   schedule_days_per_week: number | null;
   schedule_custom_days: number[];
+  schedule_interval_days: number | null;
   schedule_end_date: string | null;
   time_window: TimeWindow | null;
   planned_time: string | null;
@@ -91,7 +96,6 @@ export type HabitInput = {
   name: string;
   behavior_type: HabitBehaviorType;
   description?: string | null;
-  system_id?: string | null;
   category?: string | null;
   personal_reason?: string | null;
   start_date: string;
@@ -101,6 +105,7 @@ export type HabitInput = {
   schedule_weekdays?: number[];
   schedule_days_per_week?: number | null;
   schedule_custom_days?: number[];
+  schedule_interval_days?: number | null;
   schedule_end_date?: string | null;
   time_window?: TimeWindow | null;
   planned_time?: string | null;
@@ -132,145 +137,6 @@ export type HabitInput = {
   tracking_type?: string;
   tracking_unit?: string | null;
   is_priority?: boolean;
-  goal_id?: string;
-};
-
-export type GoalStatus = "active" | "on_hold" | "completed" | "archived";
-
-export type Goal = {
-  id: string;
-  title: string;
-  identity_statement: string | null;
-  why: string | null;
-  description: string | null;
-  outcome_definition: string | null;
-  metric_type: string | null;
-  metric_unit: string | null;
-  baseline_value: string | null;
-  target_value: string | null;
-  current_value: string | null;
-  metric_direction: "increase" | "decrease";
-  status: GoalStatus;
-  priority: number;
-  start_date: string | null;
-  color: string;
-  target_date: string | null;
-  archived_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type GoalCheckin = {
-  id: string;
-  goal_id: string;
-  checkin_date: string;
-  value: number | null;
-  note: string;
-  created_at: string;
-};
-
-export type GoalInput = {
-  title: string;
-  identity_statement?: string | null;
-  why?: string | null;
-  description?: string | null;
-  outcome_definition?: string | null;
-  metric_type?: string | null;
-  metric_unit?: string | null;
-  baseline_value?: string | null;
-  target_value?: string | null;
-  current_value?: string | null;
-  metric_direction?: "increase" | "decrease";
-  status?: GoalStatus;
-  priority?: number;
-  start_date?: string | null;
-  color: string;
-  target_date?: string | null;
-};
-
-export type System = {
-  id: string;
-  name: string;
-  description: string | null;
-  purpose: string | null;
-  cadence: string | null;
-  status: "active" | "paused" | "archived";
-  working_well: string;
-  causing_friction: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type SystemWithRelations = System & {
-  goals: Goal[];
-  habits: Habit[];
-};
-
-export type GoalWithHabits = Goal & {
-  habits: HabitWithLogs[];
-  systems?: System[];
-};
-
-export type Routine = {
-  id: string;
-  name: string;
-  description: string | null;
-  schedule_kind: string;
-  schedule_weekdays: number[];
-  schedule_custom_days: number[];
-  time_window: TimeWindow | null;
-  planned_time: string | null;
-  status: "active" | "paused" | "archived";
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-};
-
-export type RoutineStep = {
-  id: string;
-  routine_id: string;
-  title: string;
-  habit_id: string | null;
-  sort_order: number;
-  duration_minutes: number | null;
-  is_optional: boolean;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type RoutineWithSteps = Routine & {
-  steps: RoutineStep[];
-};
-
-export type RoutineStepLog = {
-  id: string;
-  routine_step_id: string;
-  log_date: string;
-  done: boolean;
-  note: string | null;
-  created_at: string;
-};
-
-export type HabitAudit = {
-  id: string;
-  behavior: string;
-  classification: "helpful" | "neutral" | "unhelpful";
-  notes: string;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-};
-
-export type Review = {
-  id: string;
-  review_type: "weekly" | "monthly";
-  period_start: string;
-  period_end: string;
-  responses: Record<string, unknown>;
-  adjustment_note: string;
-  created_at: string;
-  updated_at: string;
 };
 
 export type Profile = {
@@ -283,30 +149,8 @@ export type Profile = {
   updated_at: string;
 };
 
-/** @deprecated legacy slot model */
-export type RoutineSlotCheck = {
-  slot_key: string;
-  slot_date: string;
-  done: boolean;
-};
-
-/** @deprecated */
-export type RoutineSlotLink = {
-  slot_key: string;
-  habit: HabitWithLogs;
-  logged: boolean;
-};
-
-export type WeeklyReview = {
-  id: string;
-  week_start_date: string;
-  moved_closer: boolean;
-  notes: string;
-};
-
 export type TodayHabitItem = {
   habit: HabitWithLogs;
   scheduled: boolean;
   log: HabitLog | null;
-  routineNames: string[];
 };

@@ -34,7 +34,7 @@ export default function LoginPage() {
       <div className="login-wrap">
         <Card className="w-full max-w-sm animate-fade-up">
           <CardHeader>
-            <CardDescription>Habitat · Goals · Habits · Routine · Guides</CardDescription>
+            <CardDescription>Habitat · Goals · Habits · Guides</CardDescription>
             <CardTitle className="text-2xl font-semibold tracking-tight">
               Welcome back
             </CardTitle>

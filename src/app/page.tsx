@@ -1,10 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { TodayClient } from "@/components/TodayClient";
-import {
-  getMissedRecoveryHint,
-  getRoutineStepLogsForDate,
-  getTodayData,
-} from "@/app/actions/today";
+import { getMissedRecoveryHint, getTodayData } from "@/app/actions/today";
 import { todayKey } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
@@ -13,13 +9,11 @@ export default async function HomePage() {
   const today = todayKey();
   let error: string | null = null;
   let payload: Awaited<ReturnType<typeof getTodayData>> | null = null;
-  let stepLogs: Awaited<ReturnType<typeof getRoutineStepLogsForDate>> = [];
   let recoveryHint: string | null = null;
 
   try {
-    [payload, stepLogs, recoveryHint] = await Promise.all([
+    [payload, recoveryHint] = await Promise.all([
       getTodayData(today),
-      getRoutineStepLogsForDate(today),
       getMissedRecoveryHint(today),
     ]);
   } catch (e) {
@@ -53,8 +47,6 @@ export default async function HomePage() {
         <TodayClient
           dateKey={today}
           items={payload.items}
-          routines={payload.routines}
-          stepLogs={stepLogs}
           weekAdherence={payload.weekAdherence}
           recoveryHint={recoveryHint}
         />

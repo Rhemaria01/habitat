@@ -16,8 +16,12 @@ type ErrorProps = {
  */
 export default function Error({ error, reset }: ErrorProps) {
   useEffect(() => {
-    // Surface the real cause in the console / dev overlay for debugging.
     console.error("Unhandled route error:", error);
+    if (error.name === "ChunkLoadError") {
+      console.warn(
+        "Stale JavaScript chunk — try a hard refresh (Cmd+Shift+R) or restart `npm run dev`.",
+      );
+    }
   }, [error]);
 
   return (
@@ -36,6 +40,12 @@ export default function Error({ error, reset }: ErrorProps) {
             ← Back home
           </Link>
         </div>
+        {error.name === "ChunkLoadError" ? (
+          <p className="text-sm text-muted-foreground mt-3">
+            Your browser may be using an old cached script. Hard refresh the page
+            (Cmd+Shift+R) or restart the dev server.
+          </p>
+        ) : null}
         {error.digest ? (
           <p className="error-digest">Reference: {error.digest}</p>
         ) : null}

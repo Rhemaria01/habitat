@@ -28,7 +28,7 @@ export const FEELING_GUIDES: FeelingGuide[] = [
       "Finish a small part before moving on.",
     ],
     remember: "Start one thing. Stay with it. Finish a small part.",
-    action: { label: "Open today's routine", href: "/routine" },
+    action: { label: "Open Today", href: "/" },
   },
   {
     key: "phone-pull",
@@ -73,7 +73,7 @@ export const FEELING_GUIDES: FeelingGuide[] = [
     ],
     remember:
       "Commitment means choosing to give something a fair chance; it doesn't mean being trapped.",
-    action: { label: "Review your goals", href: "/goals" },
+    action: { label: "Check your habits", href: "/habits" },
   },
   {
     key: "too-many-directions",
@@ -88,7 +88,7 @@ export const FEELING_GUIDES: FeelingGuide[] = [
     ],
     remember:
       "You can have many interests, but give one priority your best effort.",
-    action: { label: "Set a 90-day goal", href: "/goals" },
+    action: { label: "Pick one habit to focus on", href: "/habits" },
   },
   {
     key: "silence-uncomfortable",

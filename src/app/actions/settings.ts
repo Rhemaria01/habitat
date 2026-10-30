@@ -49,16 +49,11 @@ export async function updateProfile(input: {
 export async function exportUserData(): Promise<ActionResult<string>> {
   try {
     await guard();
-    const [habits, goals, systems, routines, audits, reviews] = await Promise.all([
+    const [habits] = await Promise.all([
       prisma.habit.findMany({ include: { logs: true } }),
-      prisma.goal.findMany({ include: { checkins: true, goal_systems: true, goal_habits: true } }),
-      prisma.system.findMany(),
-      prisma.routine.findMany({ include: { steps: true } }),
-      prisma.habitAudit.findMany(),
-      prisma.review.findMany(),
     ]);
     const payload = JSON.stringify(
-      { exported_at: new Date().toISOString(), habits, goals, systems, routines, audits, reviews },
+      { exported_at: new Date().toISOString(), habits },
       null,
       2,
     );

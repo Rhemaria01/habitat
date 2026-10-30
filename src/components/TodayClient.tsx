@@ -4,18 +4,11 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { HabitLogControl } from "@/components/HabitLogControl";
 import { LOCALE, parseDateKey } from "@/lib/dates";
-import type { RoutineStepLog, TodayHabitItem, RoutineWithSteps } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { toggleRoutineStep } from "@/app/actions/today";
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
-import { toast } from "sonner";
+import type { TodayHabitItem } from "@/lib/types";
 
 type TodayClientProps = {
   dateKey: string;
   items: TodayHabitItem[];
-  routines: RoutineWithSteps[];
-  stepLogs: RoutineStepLog[];
   weekAdherence: number | null;
   recoveryHint: string | null;
 };
@@ -23,8 +16,6 @@ type TodayClientProps = {
 export function TodayClient({
   dateKey,
   items,
-  routines,
-  stepLogs,
   weekAdherence,
   recoveryHint,
 }: TodayClientProps) {
@@ -74,7 +65,7 @@ export function TodayClient({
           </p>
         ) : (
           <ul className="space-y-3">
-            {scheduled.map(({ habit, log, routineNames }) => (
+            {scheduled.map(({ habit, log }) => (
               <li
                 key={habit.id}
                 className="flex flex-col gap-2 rounded-md border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
@@ -83,11 +74,6 @@ export function TodayClient({
                   <Link href={`/habits/${habit.id}`} className="font-medium hover:underline">
                     {habit.name}
                   </Link>
-                  {routineNames.length ? (
-                    <p className="text-xs text-muted-foreground">
-                      Routines: {routineNames.join(", ")}
-                    </p>
-                  ) : null}
                   {habit.time_window ? (
                     <p className="text-xs text-muted-foreground capitalize">
                       {habit.time_window}
@@ -107,76 +93,6 @@ export function TodayClient({
           </ul>
         )}
       </section>
-
-      {routines.map((routine) => (
-        <RoutineTodaySection
-          key={routine.id}
-          routine={routine}
-          dateKey={dateKey}
-          stepLogs={stepLogs}
-        />
-      ))}
     </div>
-  );
-}
-
-function RoutineTodaySection({
-  routine,
-  dateKey,
-  stepLogs,
-}: {
-  routine: RoutineWithSteps;
-  dateKey: string;
-  stepLogs: RoutineStepLog[];
-}) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
-  const doneSet = new Set(
-    stepLogs.filter((l) => l.log_date === dateKey && l.done).map((l) => l.routine_step_id),
-  );
-
-  function toggleStep(stepId: string, done: boolean) {
-    startTransition(async () => {
-      const result = await toggleRoutineStep(stepId, dateKey, done);
-      if (result.ok) router.refresh();
-      else toast.error(result.error);
-    });
-  }
-
-  return (
-    <section className="panel">
-      <div className="panel-head">
-        <h2>{routine.name}</h2>
-        <Link href={`/routines/${routine.id}`} className="panel-meta">
-          Edit routine
-        </Link>
-      </div>
-      <ol className="space-y-2">
-        {routine.steps.map((step) => {
-          const done = doneSet.has(step.id);
-          return (
-            <li
-              key={step.id}
-              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
-            >
-              <span className={done ? "line-through text-muted-foreground" : ""}>
-                {step.title}
-                {step.is_optional ? (
-                  <span className="text-xs text-muted-foreground"> (optional)</span>
-                ) : null}
-              </span>
-              <Button
-                type="button"
-                size="sm"
-                variant={done ? "secondary" : "outline"}
-                onClick={() => toggleStep(step.id, !done)}
-              >
-                {done ? "Undo" : "Done"}
-              </Button>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
   );
 }

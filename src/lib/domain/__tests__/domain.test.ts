@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adherenceForRange } from "@/lib/domain/adherence";
-import { goalProgress } from "@/lib/domain/goal-progress";
 import { isHabitScheduledOn } from "@/lib/domain/schedule";
-import type { Goal, Habit, HabitLog } from "@/lib/types";
+import type { Habit, HabitLog } from "@/lib/types";
 
 const baseHabit = (over: Partial<Habit> = {}): Habit => ({
   id: "1",
@@ -10,7 +9,6 @@ const baseHabit = (over: Partial<Habit> = {}): Habit => ({
   kind: "build",
   behavior_type: "build",
   description: null,
-  system_id: null,
   category: null,
   personal_reason: null,
   start_date: "2026-01-01",
@@ -51,6 +49,7 @@ const baseHabit = (over: Partial<Habit> = {}): Habit => ({
   schedule_weekdays: [],
   schedule_days_per_week: null,
   schedule_custom_days: [],
+  schedule_interval_days: null,
   schedule_end_date: null,
   time_window: null,
   planned_time: null,
@@ -67,6 +66,26 @@ describe("schedule", () => {
 
   it("excludes before start date", () => {
     expect(isHabitScheduledOn(baseHabit(), "2025-12-31")).toBe(false);
+  });
+
+  it("matches every N days from start date", () => {
+    const habit = baseHabit({
+      start_date: "2026-01-01",
+      schedule_kind: "every_n_days",
+      schedule_interval_days: 3,
+    });
+    expect(isHabitScheduledOn(habit, "2026-01-01")).toBe(true);
+    expect(isHabitScheduledOn(habit, "2026-01-02")).toBe(false);
+    expect(isHabitScheduledOn(habit, "2026-01-04")).toBe(true);
+  });
+
+  it("matches selected weekdays", () => {
+    const habit = baseHabit({
+      schedule_kind: "custom",
+      schedule_custom_days: [1, 3],
+    });
+    expect(isHabitScheduledOn(habit, "2026-01-05")).toBe(true); // Mon
+    expect(isHabitScheduledOn(habit, "2026-01-06")).toBe(false); // Tue
   });
 });
 
@@ -100,33 +119,5 @@ describe("adherence", () => {
     expect(summary.scheduled).toBe(2);
     expect(summary.skipped).toBe(1);
     expect(summary.rate).toBe(100);
-  });
-});
-
-describe("goalProgress", () => {
-  it("returns null percent without metric", () => {
-    const g: Goal = {
-      id: "g",
-      title: "T",
-      identity_statement: null,
-      why: null,
-      description: null,
-      outcome_definition: "Feel better",
-      metric_type: "qualitative",
-      metric_unit: null,
-      baseline_value: null,
-      target_value: null,
-      current_value: null,
-      metric_direction: "increase",
-      status: "active",
-      priority: 0,
-      start_date: null,
-      color: "#fff",
-      target_date: null,
-      archived_at: null,
-      created_at: "",
-      updated_at: "",
-    };
-    expect(goalProgress(g).hasMetric).toBe(false);
   });
 });
